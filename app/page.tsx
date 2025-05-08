@@ -1,0 +1,90 @@
+"use client"
+
+import { useState } from "react"
+import EventScreen from "@/components/screens/event-screen"
+import EventsScreen from "@/components/screens/events-screen"
+import ProfileScreen from "@/components/screens/profile-screen"
+import CreateEventScreen from "@/components/screens/create-event-screen"
+import CreateBandScreen from "@/components/screens/create-band-screen"
+import BandsScreen from "@/components/screens/bands-screen"
+import { Sidebar } from "@/components/layout/sidebar"
+import { MobileNav } from "@/components/layout/mobile-nav"
+import { useMediaQuery } from "@/hooks/use-media-query"
+
+export default function Home() {
+  const [activeScreen, setActiveScreen] = useState<string>("events")
+  const [activeEventView, setActiveEventView] = useState<"chat" | "details">("chat")
+  const [selectedEvent, setSelectedEvent] = useState<string | null>(null)
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
+
+  // Function to handle opening an event
+  const handleOpenEvent = (eventId: string) => {
+    setSelectedEvent(eventId)
+    setActiveScreen("event")
+    setActiveEventView("chat") // Default to chat view when opening an event
+  }
+
+  // Function to go back to events list
+  const handleBackToEvents = () => {
+    setSelectedEvent(null)
+    setActiveScreen("events")
+  }
+
+  // Function to handle creating a new event
+  const handleCreateEvent = () => {
+    setActiveScreen("create-event")
+  }
+
+  // Function to handle creating a new band
+  const handleCreateBand = () => {
+    setActiveScreen("create-band")
+  }
+
+  // Function to render the active screen
+  const renderScreen = () => {
+    switch (activeScreen) {
+      case "event":
+        return (
+          <EventScreen
+            eventId={selectedEvent || "default-event"}
+            activeView={activeEventView}
+            setActiveView={setActiveEventView}
+            onBack={handleBackToEvents}
+          />
+        )
+      case "events":
+        return <EventsScreen onOpenEvent={handleOpenEvent} onCreateEvent={handleCreateEvent} />
+      case "profile":
+        return <ProfileScreen />
+      case "create-event":
+        return <CreateEventScreen onCancel={handleBackToEvents} />
+      case "create-band":
+        return <CreateBandScreen onCancel={() => setActiveScreen("bands")} />
+      case "bands":
+        return <BandsScreen onCreateBand={handleCreateBand} />
+      default:
+        return <EventsScreen onOpenEvent={handleOpenEvent} onCreateEvent={handleCreateEvent} />
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-white overflow-hidden">
+      <div className="flex flex-col lg:flex-row">
+        {isDesktop && (
+          <Sidebar
+            activeScreen={activeScreen}
+            setActiveScreen={setActiveScreen}
+            selectedEvent={selectedEvent}
+            onOpenEvent={handleOpenEvent}
+          />
+        )}
+
+        <main className="flex-1 lg:overflow-hidden w-full">{renderScreen()}</main>
+      </div>
+
+      {!isDesktop && (
+        <MobileNav activeScreen={activeScreen} setActiveScreen={setActiveScreen} selectedEvent={selectedEvent} />
+      )}
+    </div>
+  )
+}
