@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
 
@@ -50,17 +50,70 @@ export default function ProfileScreen() {
 
   // Profile state
   const [profile, setProfile] = useState({
-    name: "Tommy Defenestrati",
-    bio: "I find organello bell sounds how to get started with a jam while my favorite artist is Lady Gaga.",
-    selectedIcons: ["guitar", "piano", "rock", "pop", "jazz", "electronic"], // Default selected icons
+    name: "",
+    bio: "",
+    selectedIcons: [] as string[],
+    instruments: [] as string[],
+    genres: [] as string[],
   });
 
   // Form state for editing
   const [formData, setFormData] = useState({
-    name: profile.name,
-    bio: profile.bio,
-    selectedIcons: [...profile.selectedIcons],
+    name: "",
+    bio: "",
+    selectedIcons: [] as string[],
+    instruments: [] as string[],
+    genres: [] as string[],
   });
+
+  // Load user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        try {
+          // Get the user's metadata which includes the full name from signup
+          const { data: { user: userData } } = await supabase.auth.getUser();
+          
+          // Fetch user profile data from Supabase
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          // Use the name from user metadata if available, otherwise fall back to profile data
+          const userName = userData?.user_metadata?.full_name || data?.full_name || '';
+          
+          const profileData = {
+            name: userName,
+            bio: data?.bio || '',
+            selectedIcons: [...(data?.instruments || []), ...(data?.genres || [])],
+            instruments: data?.instruments || [],
+            genres: data?.genres || [],
+          };
+          
+          setProfile(profileData);
+          setFormData(profileData);
+          
+          // If we have a name from user metadata but not in the profile, update the profile
+          if (userName && (!data || data.full_name !== userName)) {
+            await supabase
+              .from('profiles')
+              .upsert({
+                id: user.id,
+                full_name: userName,
+                updated_at: new Date().toISOString(),
+              });
+          }
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   // Function to handle form input changes
   const handleInputChange = (
@@ -74,14 +127,51 @@ export default function ProfileScreen() {
   };
 
   // Function to save profile changes
-  const handleSaveProfile = () => {
-    setProfile({
-      name: formData.name,
-      bio: formData.bio,
-      selectedIcons: formData.selectedIcons,
-    });
-    setEditProfileMode(false);
-    setShowIconSelector(false);
+  const handleSaveProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Split selectedIcons into instruments and genres
+      const instruments = formData.selectedIcons
+        .map(id => musicIcons.find(icon => icon.id === id))
+        .filter(icon => icon?.type === 'instrument')
+        .map(icon => icon?.id) as string[];
+
+      const genres = formData.selectedIcons
+        .map(id => musicIcons.find(icon => icon.id === id))
+        .filter(icon => icon?.type === 'genre')
+        .map(icon => icon?.id) as string[];
+
+      // Update profile in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          full_name: formData.name,
+          bio: formData.bio,
+          instruments,
+          genres,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedProfile = {
+        name: formData.name,
+        bio: formData.bio,
+        selectedIcons: formData.selectedIcons,
+        instruments,
+        genres,
+      };
+
+      setProfile(updatedProfile);
+      setEditProfileMode(false);
+      setShowIconSelector(false);
+    } catch (error) {
+      console.error('Error saving profile:', error);
+    }
   };
 
   // Function to cancel profile editing
@@ -90,6 +180,8 @@ export default function ProfileScreen() {
       name: profile.name,
       bio: profile.bio,
       selectedIcons: [...profile.selectedIcons],
+      instruments: [...profile.instruments],
+      genres: [...profile.genres],
     });
     setEditProfileMode(false);
     setShowIconSelector(false);
@@ -98,17 +190,27 @@ export default function ProfileScreen() {
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      if (prev.selectedIcons.includes(iconId)) {
-        return {
-          ...prev,
-          selectedIcons: prev.selectedIcons.filter((id) => id !== iconId),
-        };
-      } else {
-        return {
-          ...prev,
-          selectedIcons: [...prev.selectedIcons, iconId],
-        };
-      }
+      const newSelectedIcons = prev.selectedIcons.includes(iconId)
+        ? prev.selectedIcons.filter((id) => id !== iconId)
+        : [...prev.selectedIcons, iconId];
+
+      // Update instruments and genres based on selected icons
+      const instruments = newSelectedIcons
+        .map(id => musicIcons.find(icon => icon.id === id))
+        .filter(icon => icon?.type === 'instrument')
+        .map(icon => icon?.id) as string[];
+
+      const genres = newSelectedIcons
+        .map(id => musicIcons.find(icon => icon.id === id))
+        .filter(icon => icon?.type === 'genre')
+        .map(icon => icon?.id) as string[];
+
+      return {
+        ...prev,
+        selectedIcons: newSelectedIcons,
+        instruments,
+        genres,
+      };
     });
   };
 
@@ -388,6 +490,8 @@ export default function ProfileScreen() {
                   name: profile.name,
                   bio: profile.bio,
                   selectedIcons: [...profile.selectedIcons],
+                  instruments: [...profile.instruments],
+                  genres: [...profile.genres],
                 });
               }}
             >
@@ -594,6 +698,8 @@ export default function ProfileScreen() {
                 name: profile.name,
                 bio: profile.bio,
                 selectedIcons: [...profile.selectedIcons],
+                instruments: [...profile.instruments],
+                genres: [...profile.genres],
               });
             }}
           >

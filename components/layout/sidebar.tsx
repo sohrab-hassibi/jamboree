@@ -1,8 +1,17 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Users, Home } from "lucide-react"
+import { supabase } from "@/lib/supabase"
+
+interface ProfileData {
+  name: string
+  bio?: string
+  instruments?: string[]
+  genres?: string[]
+}
 
 interface SidebarProps {
   activeScreen: string
@@ -12,6 +21,63 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEvent }: SidebarProps) {
+  const [profile, setProfile] = useState<ProfileData>({ name: '' })
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        // First try to get the name from user_metadata (from signup)
+        const userName = user.user_metadata?.full_name || ''
+        
+        // Then try to get the full profile
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+
+        setProfile({
+          name: userName || data?.full_name || 'User',
+          bio: data?.bio,
+          instruments: data?.instruments || [],
+          genres: data?.genres || []
+        })
+      }
+    }
+
+
+    // Set up realtime subscription for profile updates
+    const channel = supabase
+      .channel('profile_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'profiles',
+          filter: `id=eq.${(async () => {
+            const { data: { user } } = await supabase.auth.getUser()
+            return user?.id
+          })()}`
+        }, 
+        (payload) => {
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            setProfile(prev => ({
+              ...prev,
+              ...payload.new,
+              name: payload.new.full_name || prev.name
+            }))
+          }
+        }
+      )
+      .subscribe()
+
+    fetchProfile()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
   const navItems = [
     { id: "events", label: "Events", icon: Calendar },
     { id: "bands", label: "Your Bands", icon: Users },
@@ -44,7 +110,7 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
             <AvatarFallback>T</AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium text-lg">Tommy Defenestrati</div>
+            <div className="font-medium text-lg">{profile.name}</div>
             <div className="text-xs text-gray-500">View Profile</div>
           </div>
         </div>
