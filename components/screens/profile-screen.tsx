@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import type React from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Check, X } from "lucide-react";
+import { Check, X, LogOut } from "lucide-react";
 
 // Define the music icon types
 type MusicIcon = {
@@ -18,6 +20,7 @@ type MusicIcon = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
@@ -360,25 +363,45 @@ export default function ProfileScreen() {
     );
   }
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   // Profile View Mode
   return (
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
       <div className="p-4 md:p-6 border-b flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">Profile</h1>
         {isDesktop && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setEditProfileMode(true);
-              setFormData({
-                name: profile.name,
-                bio: profile.bio,
-                selectedIcons: [...profile.selectedIcons],
-              });
-            }}
-          >
-            Edit Profile
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditProfileMode(true);
+                setFormData({
+                  name: profile.name,
+                  bio: profile.bio,
+                  selectedIcons: [...profile.selectedIcons],
+                });
+              }}
+            >
+              Edit Profile
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleLogout}
+              className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         )}
       </div>
 
@@ -562,9 +585,9 @@ export default function ProfileScreen() {
       </div>
 
       {!isDesktop && (
-        <div className="p-4 border-t">
+        <div className="p-4 border-t flex flex-col space-y-2">
           <Button
-            className="w-full"
+            className="w-full bg-[#ffac6d] hover:bg-[#fdc193] text-black"
             onClick={() => {
               setEditProfileMode(true);
               setFormData({
@@ -575,6 +598,14 @@ export default function ProfileScreen() {
             }}
           >
             Edit Profile
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
           </Button>
         </div>
       )}

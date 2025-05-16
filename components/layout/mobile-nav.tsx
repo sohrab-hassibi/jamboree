@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, User, Home, LogOut } from "lucide-react";
+import { Users, User, Home } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -40,11 +40,6 @@ export function MobileNav({
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   const navItems = [
     { id: "events", label: "Events", icon: Home },
     { id: "bands", label: "Bands", icon: Users },
@@ -53,16 +48,6 @@ export function MobileNav({
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t h-16 flex items-center justify-around px-2 z-10">
-      {user && (
-        <button
-          onClick={handleLogout}
-          className="flex flex-col items-center justify-center h-full px-2"
-          title="Logout"
-        >
-          <LogOut className="h-5 w-5 text-gray-500" />
-          <span className="text-xs mt-1 text-gray-500">Logout</span>
-        </button>
-      )}
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive =
