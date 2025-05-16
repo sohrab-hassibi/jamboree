@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 import EventScreen from "@/components/screens/event-screen"
 import EventsScreen from "@/components/screens/events-screen"
 import ProfileScreen from "@/components/screens/profile-screen"
@@ -10,12 +12,52 @@ import BandsScreen from "@/components/screens/bands-screen"
 import { Sidebar } from "@/components/layout/sidebar"
 import { MobileNav } from "@/components/layout/mobile-nav"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { Loader2 } from "lucide-react"
 
 export default function Home() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true)
   const [activeScreen, setActiveScreen] = useState<string>("events")
   const [activeEventView, setActiveEventView] = useState<"chat" | "details">("chat")
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null)
   const isDesktop = useMediaQuery("(min-width: 1024px)")
+
+  useEffect(() => {
+    // Check if user is logged in
+    const checkUser = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        
+        if (error || !session) {
+          router.push('/login')
+        } else {
+          setIsLoading(false)
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+        router.push('/login')
+      }
+    }
+
+    checkUser()
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        router.push('/login')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    )
+  }
 
   // Function to handle opening an event
   const handleOpenEvent = (eventId: string) => {

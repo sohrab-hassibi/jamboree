@@ -1,13 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type React from "react";
-
+import { useRouter } from "next/navigation";
+import { createClientComponentClient, User } from "@supabase/auth-helpers-nextjs";
+import { useAuth } from "@/context/SupabaseContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Check, X } from "lucide-react";
+
+type ProfileData = {
+  name: string;
+  bio: string;
+  selectedIcons: string[];
+};
 
 // Define the music icon types
 type MusicIcon = {
@@ -18,6 +26,18 @@ type MusicIcon = {
 };
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const supabase = createClientComponentClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authUser, isAuthLoading, loading, router]);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
@@ -46,17 +66,56 @@ export default function ProfileScreen() {
   ];
 
   // Profile state
-  const [profile, setProfile] = useState({
-    name: "Tommy Defenestrati",
-    bio: "I find organello bell sounds how to get started with a jam while my favorite artist is Lady Gaga.",
-    selectedIcons: ["guitar", "piano", "rock", "pop", "jazz", "electronic"], // Default selected icons
+  const [profile, setProfile] = useState<ProfileData>({
+    name: "",
+    bio: "",
+    selectedIcons: [],
   });
 
+  // Fetch user data when auth is ready
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!authUser) return;
+      
+      try {
+        // Use the authUser from context directly since it's already available
+        const user = authUser;
+        
+        if (user) {
+          setUser(user);
+          // Set the profile name to the user's full name or email
+          const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+          const userBio = user.user_metadata?.bio || '';
+          const userIcons = user.user_metadata?.selected_icons || [];
+          
+          const userProfile: ProfileData = {
+            name: userName,
+            bio: userBio,
+            selectedIcons: Array.isArray(userIcons) ? userIcons : []
+          };
+          
+          setProfile(userProfile);
+          setFormData(prev => ({
+            ...prev,
+            ...userProfile,
+            selectedIcons: [...userProfile.selectedIcons]
+          }));
+        }
+      } catch (error) {
+        console.error('Error in fetchUserData:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [authUser]);
+
   // Form state for editing
-  const [formData, setFormData] = useState({
-    name: profile.name,
-    bio: profile.bio,
-    selectedIcons: [...profile.selectedIcons],
+  const [formData, setFormData] = useState<ProfileData>({
+    name: "",
+    bio: "",
+    selectedIcons: [],
   });
 
   // Function to handle form input changes
@@ -71,14 +130,31 @@ export default function ProfileScreen() {
   };
 
   // Function to save profile changes
-  const handleSaveProfile = () => {
-    setProfile({
-      name: formData.name,
-      bio: formData.bio,
-      selectedIcons: formData.selectedIcons,
-    });
-    setEditProfileMode(false);
-    setShowIconSelector(false);
+  const handleSaveProfile = async () => {
+    try {
+      // Update user metadata in Supabase
+      const { error } = await supabase.auth.updateUser({
+        data: { 
+          full_name: formData.name,
+          bio: formData.bio,
+          selected_icons: [...formData.selectedIcons] // Ensure we store a copy of the array
+        }
+      });
+
+      if (error) throw error;
+
+      // Update local state
+      setProfile({
+        name: formData.name,
+        bio: formData.bio,
+        selectedIcons: [...formData.selectedIcons], // Ensure we create a new array reference
+      });
+      
+      setEditProfileMode(false);
+      setShowIconSelector(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
   };
 
   // Function to cancel profile editing
@@ -95,17 +171,14 @@ export default function ProfileScreen() {
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      if (prev.selectedIcons.includes(iconId)) {
-        return {
-          ...prev,
-          selectedIcons: prev.selectedIcons.filter((id) => id !== iconId),
-        };
-      } else {
-        return {
-          ...prev,
-          selectedIcons: [...prev.selectedIcons, iconId],
-        };
-      }
+      const newSelectedIcons = prev.selectedIcons.includes(iconId)
+        ? prev.selectedIcons.filter((id) => id !== iconId)
+        : [...prev.selectedIcons, iconId];
+      
+      return {
+        ...prev,
+        selectedIcons: newSelectedIcons,
+      };
     });
   };
 
@@ -196,18 +269,18 @@ export default function ProfileScreen() {
             <h1 className="text-xl md:text-2xl font-bold">Edit Profile</h1>
           </div>
         </div>
-
+        
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex flex-col items-center">
-              <div className="relative inline-block">
+              <div className="relative inline-block mb-6">
                 <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
                   <Image
-                    src="/placeholder.svg?height=128&width=128"
+                    src="/placeholder.svg"
                     alt="Profile"
                     width={128}
                     height={128}
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                 </div>
                 <button className="absolute bottom-0 right-0 bg-[#ffac6d] rounded-full p-2">
@@ -234,6 +307,8 @@ export default function ProfileScreen() {
                     />
                   </svg>
                 </button>
+              </div>
+            </div>
               </div>
             </div>
 
