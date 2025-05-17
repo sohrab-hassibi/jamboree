@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Send, Info, MessageSquare, CheckCircle, Loader2 } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
 import { useEventParticipation } from "@/hooks/use-event-participation"
 import { useEvent, type Participant as ParticipantType, type Event as EventType } from "@/hooks/use-event"
@@ -41,8 +41,14 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
   // Use event data directly
   const event = eventData;
   
-  // Use image from event data
-  const eventImage = event?.image || '/placeholder-event.jpg';
+  // Log event data for debugging
+  useEffect(() => {
+    console.log('Event data:', event);
+    console.log('Event image URL:', event?.image_url);
+  }, [event]);
+  
+  // Use image from event data - using image_url to match the database schema
+  const eventImage = event?.image_url || '/placeholder-event.jpg';
 
   // Format date and time
   const formattedDate = useMemo(() => {
@@ -205,14 +211,15 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
     if (!event) return null;
     
     return (
-      <div className="p-4 md:p-8">
-        <div className="relative w-full h-48 md:h-64 mb-6 rounded-lg overflow-hidden">
+      <div className="p-4 md:p-8 space-y-6">
+        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100">
           <Image
             src={eventImage}
             alt={event.title}
             fill
-            className="object-cover"
+            className="object-cover w-full h-full"
             priority
+            sizes="(max-width: 768px) 100vw, 800px"
           />
         </div>
 
@@ -407,8 +414,8 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
   }
 
   return (
-    <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
-      <header className="flex items-center p-4 md:p-6 border-b">
+    <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col overflow-hidden">
+      <header className="flex items-center p-4 md:p-6 border-b flex-shrink-0">
         <button className="mr-2" onClick={onBack}>
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -458,7 +465,9 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       </header>
 
       {activeView === 'details' ? (
-        <EventDetailView />
+        <div className="flex-1 overflow-y-auto">
+          <EventDetailView />
+        </div>
       ) : (
         <div className="flex flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">

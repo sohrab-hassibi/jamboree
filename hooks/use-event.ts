@@ -14,7 +14,8 @@ export interface Event {
   location: string;
   start_time: string;
   end_time: string;
-  image?: string;
+  image_url?: string; // Updated to match database schema
+  image?: string; // Keep for backward compatibility
   created_at: string;
   updated_at: string;
   participants_going: Participant[];
