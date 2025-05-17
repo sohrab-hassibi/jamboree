@@ -2,13 +2,20 @@
 
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
-import { ArrowRight, Check, X, ChevronLeft, Share2, Heart, Send } from "lucide-react"
+import { ArrowRight, Check, X, ChevronLeft, Share2, Heart, Send, CheckCircle } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useEventParticipation } from "@/hooks/use-event-participation"
 
-export default function EventDetailScreen() {
+interface EventDetailScreenProps {
+  eventId: string;
+  onBack?: () => void;
+}
+
+export default function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const { participationStatus, isLoading, handleGoing, handleMaybe } = useEventParticipation(eventId)
 
   return (
     <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm lg:my-6 flex flex-col">
@@ -21,8 +28,11 @@ export default function EventDetailScreen() {
           className="w-full h-full object-cover"
         />
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center">
-          {!isDesktop && (
-            <button className="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full">
+          {!isDesktop && onBack && (
+            <button 
+              onClick={onBack}
+              className="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full"
+            >
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
@@ -128,12 +138,48 @@ export default function EventDetailScreen() {
               </div>
             </div>
 
-            {isDesktop && (
-              <div className="flex gap-2">
-                <Button className="bg-[#ffac6d] hover:bg-[#fdc193] text-black">I'm Going</Button>
-                <Button variant="outline">Maybe</Button>
-              </div>
-            )}
+            <div className={`flex flex-col sm:flex-row gap-2 ${isDesktop ? '' : 'mt-4'}`}>
+              <Button 
+                onClick={handleGoing}
+                disabled={isLoading}
+                variant={participationStatus === 'going' ? 'default' : 'outline'}
+                className={`flex-1 justify-center ${participationStatus === 'going' 
+                  ? 'bg-orange-50 hover:bg-orange-50 border-orange-200 text-orange-700' 
+                  : 'hover:bg-gray-50'}`}
+              >
+                {participationStatus === 'going' ? (
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                )}
+                I'm Going
+              </Button>
+              <Button 
+                onClick={handleMaybe}
+                disabled={isLoading}
+                variant={participationStatus === 'maybe' ? 'default' : 'outline'}
+                className={`flex-1 justify-center ${participationStatus === 'maybe' 
+                  ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' 
+                  : 'hover:bg-gray-50'}`}
+              >
+                {participationStatus === 'maybe' ? (
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                )}
+                Maybe
+              </Button>
+              {(participationStatus === 'going' || participationStatus === 'maybe') && (
+                <Button 
+                  onClick={participationStatus === 'going' ? handleMaybe : handleGoing}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-gray-500 hover:text-gray-700 mt-1 sm:mt-0"
+                >
+                  Change to {participationStatus === 'going' ? 'Maybe' : 'Going'}
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
@@ -147,7 +193,9 @@ export default function EventDetailScreen() {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <h2 className="font-medium">Participants</h2>
-              <div className="text-sm text-[#ffac6d]">14 Going · 7 Maybe</div>
+              <div className="text-sm text-[#ffac6d]">
+                {participationStatus === 'going' ? 'You\'re going' : participationStatus === 'maybe' ? 'You might go' : 'Not going'}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

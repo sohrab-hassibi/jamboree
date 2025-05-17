@@ -69,45 +69,51 @@ export default function ProfileScreen() {
   // Load user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         try {
           // Get the user's metadata which includes the full name from signup
-          const { data: { user: userData } } = await supabase.auth.getUser();
-          
+          const {
+            data: { user: userData },
+          } = await supabase.auth.getUser();
+
           // Fetch user profile data from Supabase
           const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
             .single();
 
           // Use the name from user metadata if available, otherwise fall back to profile data
-          const userName = userData?.user_metadata?.full_name || data?.full_name || '';
-          
+          const userName =
+            userData?.user_metadata?.full_name || data?.full_name || "";
+
           const profileData = {
             name: userName,
-            bio: data?.bio || '',
-            selectedIcons: [...(data?.instruments || []), ...(data?.genres || [])],
+            bio: data?.bio || "",
+            selectedIcons: [
+              ...(data?.instruments || []),
+              ...(data?.genres || []),
+            ],
             instruments: data?.instruments || [],
             genres: data?.genres || [],
           };
-          
+
           setProfile(profileData);
           setFormData(profileData);
-          
+
           // If we have a name from user metadata but not in the profile, update the profile
           if (userName && (!data || data.full_name !== userName)) {
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                full_name: userName,
-                updated_at: new Date().toISOString(),
-              });
+            await supabase.from("profiles").upsert({
+              id: user.id,
+              full_name: userName,
+              updated_at: new Date().toISOString(),
+            });
           }
         } catch (error) {
-          console.error('Error fetching profile:', error);
+          console.error("Error fetching profile:", error);
         }
       }
     };
@@ -129,31 +135,31 @@ export default function ProfileScreen() {
   // Function to save profile changes
   const handleSaveProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
 
       // Split selectedIcons into instruments and genres
       const instruments = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "instrument")
+        .map((icon) => icon?.id) as string[];
 
       const genres = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "genre")
+        .map((icon) => icon?.id) as string[];
 
       // Update profile in Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: formData.name,
-          bio: formData.bio,
-          instruments,
-          genres,
-          updated_at: new Date().toISOString(),
-        });
+      const { error } = await supabase.from("profiles").upsert({
+        id: user.id,
+        full_name: formData.name,
+        bio: formData.bio,
+        instruments,
+        genres,
+        updated_at: new Date().toISOString(),
+      });
 
       if (error) throw error;
 
@@ -170,7 +176,7 @@ export default function ProfileScreen() {
       setEditProfileMode(false);
       setShowIconSelector(false);
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error("Error saving profile:", error);
     }
   };
 
@@ -196,14 +202,14 @@ export default function ProfileScreen() {
 
       // Update instruments and genres based on selected icons
       const instruments = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "instrument")
+        .map((icon) => icon?.id) as string[];
 
       const genres = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "genre")
+        .map((icon) => icon?.id) as string[];
 
       return {
         ...prev,
@@ -469,9 +475,9 @@ export default function ProfileScreen() {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      router.push('/login');
+      router.push("/login");
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
