@@ -8,6 +8,42 @@ import { useState, useMemo, useEffect } from "react"
 import Image from "next/image"
 import { useEventParticipation } from "@/hooks/use-event-participation"
 import { useEvent, type Participant as ParticipantType, type Event as EventType } from "@/hooks/use-event"
+import { ParticipantCard } from "@/components/participant-card"
+
+// Music icons data
+type MusicIcon = {
+  id: string;
+  name: string;
+  emoji: string;
+  type: "instrument" | "genre";
+};
+
+const musicIcons: MusicIcon[] = [
+  { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
+  { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
+  { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
+  { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
+  { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
+  { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
+  { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
+  { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
+  { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
+  { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
+  { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
+  { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
+  { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
+  { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
+  { id: "country", name: "Country", emoji: "🤠", type: "genre" },
+  { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
+];
+
+// Helper function to get emoji by name
+const getEmoji = (name: string, type: "instrument" | "genre") => {
+  const icon = musicIcons.find(icon => 
+    icon.name.toLowerCase() === name.toLowerCase() && icon.type === type
+  );
+  return icon ? icon.emoji : name;
+};
 
 interface EventScreenProps {
   eventId: string
@@ -353,28 +389,61 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           </div>
 
           {/* Brick layout for participants */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-2">
             {activeTab === "going" ? (
               participants.going.length > 0 ? (
                 participants.going.map((participant) => (
                   <div
                     key={participant.id}
-                    className="flex items-center bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm h-14 w-full"
+                    className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
                     onClick={() => handleParticipantClick(participant)}
                   >
-                    <Avatar className="w-7 h-7 mr-2 flex-shrink-0">
-                      <Image 
-                        src={participant.avatar_url || '/placeholder.svg'} 
-                        alt={participant.full_name || 'User'} 
-                        width={28} 
-                        height={28}
-                        className="object-cover"
-                      />
-                    </Avatar>
-                    <span className="font-medium text-sm truncate">
-                      {participant.full_name || 'User'}
-                      {participant.id === event?.creator_id && " (HOST)"}
-                    </span>
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-2 flex-shrink-1">
+                        <Avatar className="w-7 h-7 flex-shrink-0">
+                          <Image 
+                            src={participant.avatar_url || '/placeholder.svg'} 
+                            alt={participant.full_name || 'User'} 
+                            width={28} 
+                            height={28}
+                            className="object-cover"
+                          />
+                        </Avatar>
+                        <span className="font-medium text-sm">
+                          {participant.full_name || 'User'}
+                          {participant.id === event?.creator_id && " (HOST)"}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {participant.instruments && participant.instruments.length > 0 ? (
+                          participant.instruments.slice(0, 2).map(instrument => (
+                            <span 
+                              key={instrument} 
+                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
+                              title={instrument}
+                            >
+                              {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
+                        )}
+                        
+                        {participant.genres && participant.genres.length > 0 ? (
+                          participant.genres.slice(0, 1).map(genre => (
+                            <span 
+                              key={genre} 
+                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
+                              title={genre}
+                            >
+                              {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -385,22 +454,55 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                 participants.maybe.map((participant) => (
                   <div
                     key={participant.id}
-                    className="flex items-center bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm h-14 w-full"
+                    className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
                     onClick={() => handleParticipantClick(participant)}
                   >
-                    <Avatar className="w-7 h-7 mr-2 flex-shrink-0">
-                      <Image 
-                        src={participant.avatar_url || '/placeholder.svg'} 
-                        alt={participant.full_name || 'User'} 
-                        width={28} 
-                        height={28}
-                        className="object-cover"
-                      />
-                    </Avatar>
-                    <span className="font-medium text-sm truncate">
-                      {participant.full_name || 'User'}
-                      {participant.id === event?.creator_id && " (HOST)"}
-                    </span>
+                    <div className="flex items-center justify-between w-full gap-4">
+                      <div className="flex items-center gap-2 flex-shrink-1">
+                        <Avatar className="w-7 h-7 flex-shrink-0">
+                          <Image 
+                            src={participant.avatar_url || '/placeholder.svg'} 
+                            alt={participant.full_name || 'User'} 
+                            width={28} 
+                            height={28}
+                            className="object-cover"
+                          />
+                        </Avatar>
+                        <span className="font-medium text-sm">
+                          {participant.full_name || 'User'}
+                          {participant.id === event?.creator_id && " (HOST)"}
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        {participant.instruments && participant.instruments.length > 0 ? (
+                          participant.instruments.slice(0, 2).map(instrument => (
+                            <span 
+                              key={instrument} 
+                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
+                              title={instrument}
+                            >
+                              {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
+                        )}
+                        
+                        {participant.genres && participant.genres.length > 0 ? (
+                          participant.genres.slice(0, 1).map(genre => (
+                            <span 
+                              key={genre} 
+                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
+                              title={genre}
+                            >
+                              {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -590,47 +692,22 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                 <div className="space-y-1 mt-2">
                   {activeTab === "going"
                     ? participants.going.slice(0, 8).map((participant) => (
-                        <div
+                        <ParticipantCard
                           key={`going-${participant.id}`}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                          participant={participant}
+                          isHost={participant.id === event?.creator_id}
                           onClick={() => handleParticipantClick(participant)}
-                        >
-                          <Avatar className="w-6 h-6">
-                            <Image
-                              src={participant.avatar_url}
-                              alt={participant.full_name}
-                              width={24}
-                              height={24}
-                              className="object-cover"
-                            />
-                          </Avatar>
-                          <span className="text-sm">
-                            {participant.full_name}
-                            {participant.id === event?.creator_id && " (HOST)"}
-                          </span>
-                        </div>
+                        />
                       ))
                     : participants.maybe.slice(0, 8).map((participant) => (
-                        <div
+                        <ParticipantCard
                           key={`maybe-${participant.id}`}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                          participant={participant}
+                          isHost={participant.id === event?.creator_id}
                           onClick={() => handleParticipantClick(participant)}
-                        >
-                          <Avatar className="w-6 h-6">
-                            <Image
-                              src={participant.avatar_url}
-                              alt={participant.full_name}
-                              width={24}
-                              height={24}
-                              className="object-cover"
-                            />
-                          </Avatar>
-                          <span className="text-sm">
-                            {participant.full_name || 'User'}
-                            {participant.id === event?.creator_id && " (HOST)"}
-                          </span>
-                        </div>
-                      ))}
+                        />
+                      ))
+                  }
                 </div>
               </div>
             </div>

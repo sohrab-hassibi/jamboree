@@ -5,6 +5,8 @@ export interface Participant {
   id: string;
   full_name: string;
   avatar_url: string;
+  instruments?: string[];
+  genres?: string[];
 }
 
 export interface Event {

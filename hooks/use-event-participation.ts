@@ -2,14 +2,22 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 // No need for auth helpers, we'll use the auth state directly
 
+interface Participant {
+  id: string
+  full_name: string
+  avatar_url: string
+  instruments?: string[]
+  genres?: string[]
+}
+
 interface EventParticipation {
   status: 'going' | 'maybe' | null
   isLoading: boolean
   handleGoing: () => Promise<void>
   handleMaybe: () => Promise<void>
   participants: {
-    going: Array<{ id: string; full_name: string; avatar_url: string }>
-    maybe: Array<{ id: string; full_name: string; avatar_url: string }>
+    going: Participant[]
+    maybe: Participant[]
   }
 }
 
@@ -28,10 +36,20 @@ export function useEventParticipation(eventId: string): EventParticipation {
   }, []);
   const [participationStatus, setParticipationStatus] = useState<'going' | 'maybe' | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [participants, setParticipants] = useState<{
-    going: Array<{ id: string; full_name: string; avatar_url: string }>
-    maybe: Array<{ id: string; full_name: string; avatar_url: string }>
-  }>({ going: [], maybe: [] });
+  type Participant = { 
+    id: string; 
+    full_name: string; 
+    avatar_url: string;
+    instruments: string[];
+    genres: string[];
+  };
+
+  type ParticipantsState = {
+    going: Participant[];
+    maybe: Participant[];
+  };
+
+  const [participants, setParticipants] = useState<ParticipantsState>({ going: [], maybe: [] });
 
   // Load participation status from database
   const loadParticipation = useCallback(async () => {
@@ -51,9 +69,16 @@ export function useEventParticipation(eventId: string): EventParticipation {
       }
 
       if (data) {
-        type Participant = { id: string; full_name: string; avatar_url: string };
-        const parseParticipant = (p: unknown): Participant | null => {
-          if (!p) return null;
+        const parseParticipant = (p: unknown): Participant => {
+          const defaultParticipant: Participant = {
+            id: 'unknown',
+            full_name: 'User',
+            avatar_url: '/placeholder.svg',
+            instruments: [],
+            genres: []
+          };
+          
+          if (!p) return defaultParticipant;
           
           // Handle string input (JSON)
           if (typeof p === 'string') {
@@ -61,21 +86,25 @@ export function useEventParticipation(eventId: string): EventParticipation {
               const parsed = JSON.parse(p);
               if (parsed && typeof parsed === 'object' && 'id' in parsed) {
                 return {
-                  id: String(parsed.id),
+                  id: String(parsed.id || 'unknown'),
                   full_name: (parsed as any).full_name || 'User',
-                  avatar_url: (parsed as any).avatar_url || '/placeholder.svg'
+                  avatar_url: (parsed as any).avatar_url || '/placeholder.svg',
+                  instruments: Array.isArray((parsed as any).instruments) 
+                    ? (parsed as any).instruments.map(String) 
+                    : [],
+                  genres: Array.isArray((parsed as any).genres) 
+                    ? (parsed as any).genres.map(String) 
+                    : []
                 };
               }
               return { 
-                id: p, 
-                full_name: 'User', 
-                avatar_url: '/placeholder.svg' 
+                ...defaultParticipant,
+                id: p || 'unknown'
               };
             } catch (e) {
               return { 
-                id: p, 
-                full_name: 'User', 
-                avatar_url: '/placeholder.svg' 
+                ...defaultParticipant,
+                id: p || 'unknown'
               };
             }
           }
@@ -84,22 +113,28 @@ export function useEventParticipation(eventId: string): EventParticipation {
           if (typeof p === 'object' && p !== null && 'id' in p) {
             const participant = p as Record<string, unknown>;
             return {
-              id: String(participant.id),
+              id: String(participant.id || 'unknown'),
               full_name: typeof participant.full_name === 'string' ? participant.full_name : 'User',
-              avatar_url: typeof participant.avatar_url === 'string' ? participant.avatar_url : '/placeholder.svg'
+              avatar_url: typeof participant.avatar_url === 'string' ? participant.avatar_url : '/placeholder.svg',
+              instruments: Array.isArray(participant.instruments) 
+                ? participant.instruments.map(String) 
+                : [],
+              genres: Array.isArray(participant.genres) 
+                ? participant.genres.map(String) 
+                : []
             };
           }
           
-          return null;
+          return defaultParticipant;
         }
 
-        const going = (Array.isArray(data.participants_going) 
+        const going: Participant[] = Array.isArray(data.participants_going) 
           ? data.participants_going.map(parseParticipant)
-          : []).filter((p: Participant | null): p is Participant => p !== null);
+          : [];
           
-        const maybe = (Array.isArray(data.participants_maybe)
+        const maybe: Participant[] = Array.isArray(data.participants_maybe)
           ? data.participants_maybe.map(parseParticipant)
-          : []).filter((p: Participant | null): p is Participant => p !== null);
+          : [];
 
         console.log('Loaded participants:', { going, maybe });
         setParticipants({ going, maybe });
@@ -180,11 +215,27 @@ export function useEventParticipation(eventId: string): EventParticipation {
 
       console.log('User profile found:', userProfile);
 
-      // Create participant object with required fields
+      // Get user's profile data for instruments and genres
+      const { data: userProfileData, error: profileDataError } = await supabase
+        .from('profiles')
+        .select('instruments, genres')
+        .eq('id', userId)
+        .single();
+
+      if (profileDataError) {
+        console.error('Error fetching user profile data:', profileDataError);
+        // Don't throw, we'll just use empty arrays
+      }
+
+      console.log('User profile data:', userProfileData);
+
+      // Create participant object with required fields and additional data
       const participant = {
         id: userProfile.id,
         full_name: userProfile.full_name || 'User',
-        avatar_url: userProfile.avatar_url || '/placeholder.svg'
+        avatar_url: userProfile.avatar_url || '/placeholder.svg',
+        instruments: userProfileData?.instruments || [],
+        genres: userProfileData?.genres || []
       };
       
       console.log('Created participant object:', participant);
@@ -192,14 +243,50 @@ export function useEventParticipation(eventId: string): EventParticipation {
       // Helper to parse participant data
       const parseParticipant = (p: any) => {
         if (!p) return null;
+        
+        // If it's a string, try to parse it as JSON
         if (typeof p === 'string') {
           try {
-            return JSON.parse(p);
+            const parsed = JSON.parse(p);
+            // Ensure we have the required fields
+            return {
+              id: parsed.id || 'unknown',
+              full_name: parsed.full_name || 'User',
+              avatar_url: parsed.avatar_url || '/placeholder.svg',
+              instruments: Array.isArray(parsed.instruments) ? parsed.instruments : [],
+              genres: Array.isArray(parsed.genres) ? parsed.genres : []
+            };
           } catch {
-            return { id: p };
+            // If parsing fails, return a basic participant object
+            return { 
+              id: p, 
+              full_name: 'User', 
+              avatar_url: '/placeholder.svg',
+              instruments: [],
+              genres: [] 
+            };
           }
         }
-        return p;
+        
+        // If it's already an object, ensure it has the required fields
+        if (typeof p === 'object' && p !== null) {
+          return {
+            id: p.id || 'unknown',
+            full_name: p.full_name || 'User',
+            avatar_url: p.avatar_url || '/placeholder.svg',
+            instruments: Array.isArray(p.instruments) ? p.instruments : [],
+            genres: Array.isArray(p.genres) ? p.genres : []
+          };
+        }
+        
+        // Default fallback
+        return { 
+          id: 'unknown', 
+          full_name: 'User', 
+          avatar_url: '/placeholder.svg',
+          instruments: [],
+          genres: [] 
+        };
       };
 
       // Get current event data
@@ -215,11 +302,24 @@ export function useEventParticipation(eventId: string): EventParticipation {
       }
 
       // Process current participants
-      type Participant = { id: string; full_name: string; avatar_url: string };
+      type Participant = { 
+        id: string; 
+        full_name: string; 
+        avatar_url: string;
+        instruments: string[];
+        genres: string[];
+      };
       const processParticipants = (participants: any[] = []): Participant[] => 
         participants
           .map(parseParticipant)
-          .filter((p: Participant | null): p is Participant => p !== null);
+          .filter((p: any): p is Participant => p !== null)
+          .map(p => ({
+            id: p.id,
+            full_name: p.full_name || 'User',
+            avatar_url: p.avatar_url || '/placeholder.svg',
+            instruments: Array.isArray(p.instruments) ? p.instruments : [],
+            genres: Array.isArray(p.genres) ? p.genres : []
+          }));
 
       let updatedGoing = processParticipants(eventData.participants_going);
       let updatedMaybe = processParticipants(eventData.participants_maybe);
