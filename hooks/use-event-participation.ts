@@ -202,18 +202,34 @@ export function useEventParticipation(eventId: string): EventParticipation {
         .eq('id', userId)
         .single();
 
+      // Get the auth user info directly as a fallback
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+      
+      // Log all errors but continue with defaults if needed
       if (profileError) {
         console.error('Error fetching user profile:', profileError);
-        throw profileError;
+        console.error('Error details:', JSON.stringify({
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          code: profileError.code
+        }));
+        // Don't throw, we'll use auth user as fallback
       }
       
-      if (!userProfile) {
-        const error = new Error('User profile not found');
-        console.error(error.message);
-        throw error;
+      if (!userProfile && authError) {
+        console.error('Auth user fallback also failed:', authError);
+        throw new Error('Could not get user data from any source');
       }
+      
+      // Create a profile object using available data sources
+      const effectiveProfile = userProfile || {
+        id: userId,
+        full_name: authUser?.user_metadata?.full_name || 'User',
+        avatar_url: authUser?.user_metadata?.avatar_url || '/placeholder.svg'
+      };
 
-      console.log('User profile found:', userProfile);
+      console.log('Effective profile being used:', effectiveProfile);
 
       // Get user's profile data for instruments and genres
       const { data: userProfileData, error: profileDataError } = await supabase
@@ -231,9 +247,9 @@ export function useEventParticipation(eventId: string): EventParticipation {
 
       // Create participant object with required fields and additional data
       const participant = {
-        id: userProfile.id,
-        full_name: userProfile.full_name || 'User',
-        avatar_url: userProfile.avatar_url || '/placeholder.svg',
+        id: effectiveProfile.id,
+        full_name: effectiveProfile.full_name || 'User',
+        avatar_url: effectiveProfile.avatar_url || '/placeholder.svg',
         instruments: userProfileData?.instruments || [],
         genres: userProfileData?.genres || []
       };
@@ -382,6 +398,14 @@ export function useEventParticipation(eventId: string): EventParticipation {
       
     } catch (error) {
       console.error('Error in updateParticipation:', error);
+      console.error('Error context:', JSON.stringify({
+        userId,
+        eventId,
+        status,
+        environment: process.env.NODE_ENV,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Configured' : 'Missing',
+        timestamp: new Date().toISOString()
+      }));
       // Reload participation data to ensure consistency
       await loadParticipation();
       throw error;
