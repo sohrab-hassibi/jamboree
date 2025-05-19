@@ -9,12 +9,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Server configuration for IPv4 and IPv6 compatibility
-  server: {
-    // Support both IPv4 and IPv6
-    host: '::',
-    port: 3000,
-  },
+  // Ensuring compatibility with Vercel deployment
+  // The IPv4/IPv6 settings will be used for local development only
 }
 
 export default nextConfig
