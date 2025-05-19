@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Check, X, LogOut } from "lucide-react";
+import { Check, X, LogOut, Calendar, Clock, MapPin } from "lucide-react";
+import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
 
 // Define the music icon types
 type MusicIcon = {
@@ -18,6 +19,173 @@ type MusicIcon = {
   emoji: string;
   type: "instrument" | "genre";
 };
+
+// Upcoming Events Component
+function UpcomingEvents() {
+  const { upcomingEvents, isLoading, error } = useUserEvents();
+  const router = useRouter();
+  
+  const formatEventDate = (startTime: string) => {
+    const start = new Date(startTime);
+    
+    // Format the date in a compact way for the cards
+    return start.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric'
+    });
+  };
+  
+  const handleEventClick = (eventId: string) => {
+    // Use the parent component's state management for navigation
+    // This will be passed from the parent ProfileScreen component
+    if (typeof window !== 'undefined') {
+      // Access the global state management through the window object
+      const event = new CustomEvent('openEvent', { detail: { eventId } });
+      window.dispatchEvent(event);
+    }
+  };
+  
+  return (
+    <div className="space-y-3 mt-6">
+      <h3 className="font-medium">Upcoming Events</h3>
+      
+      {isLoading ? (
+        <div className="text-center py-4">
+          <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-4">
+          <p className="text-xs text-red-500">Error loading events</p>
+        </div>
+      ) : upcomingEvents.length === 0 ? (
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-500">No upcoming events</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-2 hide-scrollbar">
+          <div className="flex space-x-3">
+            {upcomingEvents.map((event: UserEvent) => {
+              const dateStr = formatEventDate(event.start_time);
+              return (
+                <div
+                  key={event.id}
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  {/* Event image with participation indicator */}
+                  <div className="relative">
+                    <Image
+                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
+                      alt={event.title}
+                      width={200}
+                      height={100}
+                      className="w-full h-24 object-cover"
+                    />
+                    {/* Participation status indicator */}
+                    <div 
+                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
+                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="p-2">
+                    <div className="font-medium text-sm">{event.title}</div>
+                    <div className="text-xs text-gray-500">{dateStr}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Post Games (Past Events) Component
+function PostGamesEvents() {
+  const { pastEvents, isLoading, error } = useUserEvents();
+  const router = useRouter();
+  
+  const formatEventDate = (startTime: string) => {
+    const start = new Date(startTime);
+    
+    return start.toLocaleDateString([], {
+      weekday: 'short',
+      month: 'numeric',
+      day: 'numeric'
+    });
+  };
+  
+  const handleEventClick = (eventId: string) => {
+    // Use the parent component's state management for navigation
+    // This will be passed from the parent ProfileScreen component
+    if (typeof window !== 'undefined') {
+      // Access the global state management through the window object
+      const event = new CustomEvent('openEvent', { detail: { eventId } });
+      window.dispatchEvent(event);
+    }
+  };
+  
+  return (
+    <div>
+      <h3 className="font-medium mb-3">Post Games 👀</h3>
+      
+      {isLoading ? (
+        <div className="text-center py-4">
+          <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
+          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-4">
+          <p className="text-xs text-red-500">Error loading events</p>
+        </div>
+      ) : pastEvents.length === 0 ? (
+        <div className="text-center py-4">
+          <p className="text-sm text-gray-500">No past events</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-2 hide-scrollbar">
+          <div className="flex space-x-3">
+            {pastEvents.map((event: UserEvent) => {
+              const dateStr = formatEventDate(event.start_time);
+              return (
+                <div
+                  key={event.id}
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  {/* Event image with participation indicator */}
+                  <div className="relative">
+                    <Image
+                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
+                      alt={event.title}
+                      width={200}
+                      height={100}
+                      className="w-full h-24 object-cover"
+                    />
+                    {/* Participation status indicator */}
+                    <div 
+                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
+                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                      }`}
+                    />
+                  </div>
+                  <div className="p-2">
+                    <div className="font-medium text-sm">{event.title}</div>
+                    <div className="text-xs text-gray-500">{dateStr}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -619,68 +787,12 @@ export default function ProfileScreen() {
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  {/* Upcoming Events */}
-                  <div>
-                    <h3 className="font-medium mb-3">Upcoming Events</h3>
-                    <div className="overflow-x-auto pb-2 hide-scrollbar">
-                      <div className="flex space-x-3">
-                        {[1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px]"
-                          >
-                            <Image
-                              src="/placeholder.svg?height=100&width=200"
-                              alt="Event"
-                              width={200}
-                              height={100}
-                              className="w-full h-24 object-cover"
-                            />
-                            <div className="p-2">
-                              <div className="font-medium text-sm">
-                                Old Peeps Jam
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Sunday 5/4
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                {/* Upcoming Events Section */}
+                <UpcomingEvents />
 
+                <div className="space-y-6">
                   {/* Past Events */}
-                  <div>
-                    <h3 className="font-medium mb-3">Post Games 👀</h3>
-                    <div className="overflow-x-auto pb-2 hide-scrollbar">
-                      <div className="flex space-x-3">
-                        {[1, 2].map((i) => (
-                          <div
-                            key={i}
-                            className="rounded-lg overflow-hidden border opacity-70 flex-shrink-0 w-[200px]"
-                          >
-                            <Image
-                              src="/placeholder.svg?height=100&width=200"
-                              alt="Event"
-                              width={200}
-                              height={100}
-                              className="w-full h-24 object-cover"
-                            />
-                            <div className="p-2">
-                              <div className="font-medium text-sm">
-                                Spring Jam
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Sunday 4/12
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <PostGamesEvents />
                 </div>
               </div>
             </div>

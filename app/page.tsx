@@ -50,6 +50,32 @@ export default function Home() {
 
     return () => subscription.unsubscribe()
   }, [router])
+  
+  // Add listener for custom event navigation from profile page
+  useEffect(() => {
+    const handleOpenEventFromProfile = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const eventId = customEvent.detail?.eventId;
+      if (eventId) {
+        // We're using a function reference here instead of direct call
+        // to avoid initialization issues
+        const openEvent = (id: string) => {
+          setSelectedEvent(id);
+          setActiveScreen("event");
+          setActiveEventView("chat");
+        };
+        openEvent(eventId);
+      }
+    };
+    
+    window.addEventListener('openEvent', handleOpenEventFromProfile);
+    
+    return () => {
+      window.removeEventListener('openEvent', handleOpenEventFromProfile);
+    };
+  }, []);
+  
+
 
   if (isLoading) {
     return (
@@ -65,6 +91,7 @@ export default function Home() {
     setActiveScreen("event")
     setActiveEventView("chat") // Default to chat view when opening an event
   }
+
 
   // Function to go back to events list
   const handleBackToEvents = () => {
