@@ -1,100 +1,249 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useRef, useState } from "react"
+import { format } from "date-fns"
 
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
-import { ChevronLeft, Send, Info, Phone, Video } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ChevronLeft, Send, Info, MessageSquare, Users, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useState } from "react"
+import { useBands } from "@/hooks/use-bands"
+import { useBandMessages, type BandMessage } from "@/hooks/use-band-messages"
+import { useBandMembers, type BandMember } from "@/hooks/use-band-members"
+import { useAuth } from "@/context/SupabaseContext"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
 
 interface BandChatScreenProps {
   bandId?: string
   onBack: () => void
 }
 
-export default function BandChatScreen({ bandId = "default-band", onBack }: BandChatScreenProps) {
+export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenProps) {
+  const router = useRouter()
   const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [messageText, setMessageText] = useState("")
-
-  // Mock band data - in a real app, this would be fetched based on bandId
-  const band = {
-    id: bandId,
-    name: "The ideal conditions",
-    members: [
-      { id: "user-1", name: "Tommy", image: "/placeholder.svg?height=32&width=32" },
-      { id: "user-2", name: "Candy", image: "/placeholder.svg?height=32&width=32" },
-      { id: "user-3", name: "Melissa", image: "/placeholder.svg?height=32&width=32" },
-      { id: "user-4", name: "David", image: "/placeholder.svg?height=32&width=32" },
-      { id: "user-5", name: "Sophie", image: "/placeholder.svg?height=32&width=32" },
-    ],
-    messages: [
-      {
-        id: "msg-1",
-        sender: "Tommy",
-        senderId: "user-1",
-        text: "Hey everyone! When's our next practice?",
-        time: "Monday 7:41 PM",
-        image: "/placeholder.svg?height=32&width=32",
-      },
-      {
-        id: "msg-2",
-        sender: "You",
-        senderId: "current-user",
-        text: "I'm free on Thursday evening if that works",
-        time: "Monday 7:45 PM",
-        isUser: true,
-      },
-      {
-        id: "msg-3",
-        sender: "Melissa",
-        senderId: "user-3",
-        text: "Thursday works for me too!",
-        time: "Wednesday 12:15 PM",
-        image: "/placeholder.svg?height=32&width=32",
-      },
-      {
-        id: "msg-4",
-        sender: "David",
-        senderId: "user-4",
-        text: "I can make it Thursday. Should we try that new riff we were working on?",
-        time: "Wednesday 1:30 PM",
-        image: "/placeholder.svg?height=32&width=32",
-      },
-      {
-        id: "msg-5",
-        sender: "Sophie",
-        senderId: "user-5",
-        text: "Yes! And I have some new lyrics to share too.",
-        time: "Wednesday 2:05 PM",
-        image: "/placeholder.svg?height=32&width=32",
-      },
-      {
-        id: "msg-6",
-        sender: "You",
-        senderId: "current-user",
-        text: "Awesome! Can't wait to hear them.",
-        time: "Wednesday 2:10 PM",
-        isUser: true,
-      },
-      {
-        id: "msg-7",
-        sender: "Candy",
-        senderId: "user-2",
-        text: "ya I think I have spare headphones if anyone needs them",
-        time: "Today 10:42 AM",
-        image: "/placeholder.svg?height=32&width=32",
-      },
-    ],
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const { user } = useAuth()
+  
+  // Get band data
+  const { bands } = useBands()
+  const band = bands.find(b => b.id === bandId) || { id: bandId, name: "Loading..." }
+  
+  // Get band messages
+  const { messages, isLoading: messagesLoading, error: messagesError, sendMessage } = useBandMessages(bandId)
+  
+  // Get band members
+  const { members, isLoading: membersLoading, error: membersError } = useBandMembers(bandId)
+  
+  // Directly fetch band members from Supabase
+  const [directMembers, setDirectMembers] = useState<any[]>([])
+  const [directLoading, setDirectLoading] = useState(true)
+  
+  // Process member data with profile information
+  const processMembers = (memberData: any[], profileData: any[]) => {
+    console.log('Processing members with profiles:', { memberData, profileData })
+    
+    // Combine the data
+    const data = memberData.map(member => {
+      console.log(`Looking for profile with id ${member.user_id}`)
+      const profile = profileData.find((profile: any) => profile.id === member.user_id)
+      console.log(`Found profile for ${member.user_id}:`, profile)
+      
+      return {
+        ...member,
+        user: profile || {
+          // Fallback profile if not found
+          id: member.user_id,
+          full_name: 'Unknown Member',
+          avatar_url: '/placeholder.svg'
+        }
+      }
+    })
+    
+    console.log('Combined member data:', data)
+    setDirectMembers(data)
+    setDirectLoading(false)
   }
-
-  const handleSendMessage = () => {
-    if (messageText.trim()) {
-      // In a real app, this would send the message to a backend
-      console.log("Sending message:", messageText)
-      setMessageText("")
+  
+  useEffect(() => {
+    const fetchBandMembers = async () => {
+      if (!bandId) return
+      
+      try {
+        setDirectLoading(true)
+        
+        console.log('Fetching members for band ID:', bandId)
+        
+        // Get band members (simple query without join)
+        const { data: memberData, error: memberError } = await supabase
+          .from('band_members')
+          .select('*')
+          .eq('band_id', bandId)
+        
+        if (memberError) {
+          console.error('Error fetching band members:', memberError)
+          return
+        }
+        
+        console.log('Raw band members:', memberData)
+        
+        if (!memberData || memberData.length === 0) {
+          setDirectMembers([])
+          return
+        }
+        
+        // Then, get the profiles for each member
+        const userIds = memberData.map(member => member.user_id).filter(id => id !== null && id !== undefined)
+        console.log('User IDs to fetch profiles for:', userIds)
+        
+        // If no valid user IDs, skip the profile query
+        if (userIds.length === 0) {
+          console.log('No valid user IDs to fetch profiles for')
+          console.log('Processing members without profile data')
+        
+          // Create simplified user objects for each member
+          const processedMembers = memberData.map(member => ({
+            ...member,
+            user: {
+              id: member.user_id,
+              full_name: member.user_id || 'Unknown User',
+              avatar_url: '/placeholder.svg'
+            }
+          }))
+        
+          console.log('Processed members:', processedMembers)
+          setDirectMembers(processedMembers)
+          setDirectLoading(false)
+          return
+        }
+        
+        // Fetch user details using the same approach as in use-event.ts
+        try {
+          // Get the user IDs from the members
+          const userIds = memberData.map(member => member.user_id).filter(id => id !== null && id !== undefined);
+          console.log('User IDs to fetch details for:', userIds);
+          
+          if (userIds.length === 0) {
+            // No valid user IDs, use default names
+            const processedMembers = memberData.map((member: any) => ({
+              ...member,
+              user: {
+                id: member.user_id,
+                full_name: member.role === 'creator' ? 'Band Creator' : 'Band Member',
+                avatar_url: '/placeholder.svg'
+              }
+            }));
+            
+            setDirectMembers(processedMembers);
+            return;
+          }
+          
+          // Fetch user details from the users table (same as in use-event.ts)
+          const userPromises = userIds.map(async (userId) => {
+            const { data, error } = await supabase
+              .from('users')
+              .select('id, full_name, avatar_url')
+              .eq('id', userId)
+              .single();
+            
+            if (error || !data) {
+              console.error('Error fetching user details:', error);
+              return {
+                id: userId,
+                full_name: 'Unknown User',
+                avatar_url: '/placeholder.svg'
+              };
+            }
+            
+            return data;
+          });
+          
+          // Wait for all user details to be fetched
+          const userDetails = await Promise.all(userPromises);
+          console.log('User details fetched:', userDetails);
+          
+          // Combine member data with user details
+          const processedMembers = memberData.map((member: any) => {
+            // Find the matching user details
+            const userDetail = userDetails.find(u => u.id === member.user_id);
+            
+            return {
+              ...member,
+              user: userDetail || {
+                id: member.user_id,
+                full_name: member.role === 'creator' ? 'Band Creator' : 'Band Member',
+                avatar_url: '/placeholder.svg'
+              }
+            };
+          })
+          
+          console.log('Processed members with names:', processedMembers)
+          setDirectMembers(processedMembers)
+        } catch (err) {
+          console.error('Exception processing members:', err)
+          setDirectMembers([])
+        }
+      } catch (err) {
+        console.error('Error in fetchBandMembers:', err)
+      } finally {
+        setDirectLoading(false)
+      }
     }
+    
+    fetchBandMembers()
+  }, [bandId])
+  
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages])
+  
+  // Handle sending a new message
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!messageText.trim()) return
+    
+    try {
+      await sendMessage(messageText.trim())
+      setMessageText("") // Clear the input after sending
+    } catch (error) {
+      console.error("Error sending message:", error)
+    }
+  }
+  
+  // Format the timestamp for display
+  const formatMessageTime = (timestamp: string) => {
+    try {
+      const date = new Date(timestamp)
+      const now = new Date()
+      
+      // If it's today, just show the time
+      if (date.toDateString() === now.toDateString()) {
+        return format(date, "h:mm a")
+      }
+      
+      // If it's this year, show month and day
+      if (date.getFullYear() === now.getFullYear()) {
+        return format(date, "MMM d, h:mm a")
+      }
+      
+      // Otherwise show full date
+      return format(date, "MMM d, yyyy, h:mm a")
+    } catch (e) {
+      console.error("Error formatting date:", e)
+      return "Unknown time"
+    }
+  }
+  
+  // Check if a message is from the current user
+  const isCurrentUser = (message: BandMessage) => {
+    return message.user_id === user?.id
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -104,9 +253,84 @@ export default function BandChatScreen({ bandId = "default-band", onBack }: Band
     }
   }
 
+  // Navigate to user profile
+  const navigateToProfile = (userId: string, name: string) => {
+    console.log(`Navigating to ${name}'s profile (${userId})`);
+    router.push(`/profile/${userId}`);
+  }
+  
+  // Handle member click
+  const handleMemberClick = (member: any) => {
+    if (member?.user_id) {
+      const fullName = member.user?.full_name || 'User';
+      console.log(`Navigating to profile for user ${member.user_id} (${fullName})`);
+      navigateToProfile(member.user_id, fullName);
+    } else {
+      console.log('Cannot navigate: Missing user_id in member data', member);
+    }
+  };
+  
+  // Render the members sidebar
+  const MembersSidebar = () => (
+    <div className="hidden md:block w-64 min-w-[16rem] border-l overflow-y-auto flex-shrink-0">
+      <div className="p-4 border-b">
+        <h2 className="font-medium">Band Members</h2>
+        <div className="text-sm text-[#ffac6d] mt-1">
+          {directMembers.length} {directMembers.length === 1 ? 'Member' : 'Members'}
+        </div>
+      </div>
+      <div className="p-2">
+        {directLoading ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-4 w-4 animate-spin text-[#ffac6d]" />
+          </div>
+        ) : directMembers.length === 0 ? (
+          <div className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">No members yet</p>
+          </div>
+        ) : (
+          <div className="space-y-1 mt-2">
+            {directMembers.map((member) => {
+              // Extract user data from the profiles object
+              const userData = member.user;
+              const fullName = userData?.full_name || "Unknown member";
+              const avatarUrl = userData?.avatar_url || "/placeholder.svg";
+              
+              return (
+                <div 
+                  key={member.id} 
+                  className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                  onClick={() => handleMemberClick(member)}
+                >
+                  <Avatar className="w-6 h-6">
+                    <Image 
+                      src={avatarUrl} 
+                      alt={fullName} 
+                      width={24} 
+                      height={24}
+                      className="object-cover"
+                    />
+                  </Avatar>
+                  <div className="overflow-hidden">
+                    <span className="text-sm truncate block">
+                      {fullName}
+                    </span>
+                    {member.role === 'creator' && (
+                      <span className="text-xs text-[#ffac6d]">Creator</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+  
   return (
-    <div className="min-h-screen bg-white lg:h-screen flex flex-col">
-      <header className="flex items-center p-4 md:p-6 border-b">
+    <div className="min-h-screen bg-white lg:h-screen flex flex-col w-full">
+      <header className="flex items-center p-4 md:p-6 border-b w-full">
         <button className="mr-2" onClick={onBack}>
           <ChevronLeft className="h-5 w-5" />
         </button>
@@ -116,65 +340,79 @@ export default function BandChatScreen({ bandId = "default-band", onBack }: Band
           </Avatar>
           <h1 className="text-lg font-medium">{band.name}</h1>
         </div>
-        <div className="ml-auto flex gap-2">
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Phone className="h-5 w-5" />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Video className="h-5 w-5" />
-          </button>
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Info className="h-5 w-5" />
-          </button>
+        <div className="ml-auto">
+          <Info className="h-5 w-5 text-gray-500" />
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden w-full">
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-          {band.messages.map((message) => (
-            <div key={message.id} className={`flex items-start ${message.isUser ? "justify-end gap-2" : "gap-2"}`}>
-              {!message.isUser && (
-                <Avatar className="w-8 h-8">
-                  <Image src={message.image || "/placeholder.svg"} alt={message.sender} width={32} height={32} />
-                </Avatar>
-              )}
-              <div>
-                {!message.isUser && (
-                  <div className="text-xs text-gray-500">
-                    {message.sender} • {message.time}
-                  </div>
-                )}
-                <div className={`${message.isUser ? "bg-[#ffd2b0]" : "bg-gray-100"} rounded-lg p-2 mt-1 max-w-xs`}>
-                  <p className="text-sm">{message.text}</p>
-                </div>
-                {message.isUser && <div className="text-xs text-gray-500 text-right mt-1">{message.time}</div>}
+            {messagesLoading ? (
+              <div className="flex justify-center my-4">
+                <Loader2 className="h-6 w-6 animate-spin text-[#ffac6d]" />
               </div>
-            </div>
-          ))}
+            ) : messagesError ? (
+              <div className="text-center text-red-500 my-4">Error loading messages</div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-gray-500 my-4">
+                No messages yet. Be the first to say hello!
+              </div>
+            ) : (
+              messages.map((message: BandMessage) => {
+                const isCurrentUser = message.user_id === user?.id;
+                const messageDate = new Date(message.created_at);
+                const messageTime = messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                
+                return (
+                  <div key={message.id} className={`flex items-start ${isCurrentUser ? "justify-end gap-2" : "gap-2"}`}>
+                    {!isCurrentUser ? (
+                      <Avatar className="w-8 h-8">
+                        <Image 
+                          src={message.user?.avatar_url || '/placeholder.svg'} 
+                          alt={message.user?.full_name || 'User'} 
+                          width={32} 
+                          height={32} 
+                          className="object-cover"
+                        />
+                      </Avatar>
+                    ) : (
+                      <Avatar className="w-8 h-8 order-1">
+                        <Image 
+                          src={user?.user_metadata?.avatar_url || '/placeholder.svg'} 
+                          alt="You" 
+                          width={32} 
+                          height={32} 
+                          className="object-cover"
+                        />
+                      </Avatar>
+                    )}
+                    <div className={`${isCurrentUser ? 'w-full flex flex-col items-end' : ''}`}>
+                      {!isCurrentUser ? (
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs font-medium">{message.user?.full_name || 'User'}</div>
+                          <div className="text-xs text-gray-500">{messageTime}</div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="text-xs text-gray-500">{messageTime}</div>
+                          <div className="text-xs font-medium">You</div>
+                        </div>
+                      )}
+                      <div className={`${isCurrentUser ? "bg-[#ffd2b0]" : "bg-gray-100"} rounded-lg p-2 mt-1 max-w-xs`}>
+                        <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          <MembersSidebar />
         </div>
 
-        {isDesktop && (
-          <div className="w-64 border-l hidden lg:block">
-            <div className="p-4 border-b">
-              <h2 className="font-medium">Band Members</h2>
-            </div>
-            <div className="p-2">
-              <div className="space-y-1 mt-2">
-                {band.members.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100">
-                    <Avatar className="w-6 h-6">
-                      <Image src={member.image || "/placeholder.svg"} alt={member.name} width={24} height={24} />
-                    </Avatar>
-                    <span className="text-sm">{member.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="p-4 border-t">
+      <form onSubmit={handleSendMessage} className="p-4 border-t">
         <div className="relative">
           <Input
             placeholder="Send a message..."
@@ -182,12 +420,22 @@ export default function BandChatScreen({ bandId = "default-band", onBack }: Band
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
             onKeyDown={handleKeyDown}
+            disabled={!user}
           />
-          <button className="absolute right-3 top-1/2 transform -translate-y-1/2" onClick={handleSendMessage}>
-            <Send className={`h-5 w-5 ${messageText.trim() ? "text-[#ffac6d]" : "text-gray-400"}`} />
+          <button 
+            type="submit"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2"
+            disabled={!messageText.trim() || !user}
+          >
+            <Send className={`h-5 w-5 ${messageText.trim() && user ? "text-[#ffac6d]" : "text-gray-400"}`} />
           </button>
         </div>
-      </div>
+        {!user && (
+          <p className="text-xs text-center mt-2 text-muted-foreground">
+            You need to be signed in to send messages
+          </p>
+        )}
+      </form>
 
       <div className="h-16 lg:hidden">{/* Spacer for mobile nav */}</div>
     </div>

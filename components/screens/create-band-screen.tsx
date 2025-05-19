@@ -1,13 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Camera, ChevronLeft, Plus, Search, X } from "lucide-react"
+import { Camera, ChevronLeft, Plus, Search, X, Loader2 } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Avatar } from "@/components/ui/avatar"
 import Image from "next/image"
+import { useBands } from "@/hooks/use-bands"
+import { useBandMembers } from "@/hooks/use-band-members"
+import { useAuth } from "@/context/SupabaseContext"
+import { toast } from "sonner"
 
 interface CreateBandScreenProps {
   onCancel: () => void
@@ -15,30 +19,54 @@ interface CreateBandScreenProps {
 
 export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const { user } = useAuth()
+  const { createBand } = useBands()
+  const { searchUsers } = useBandMembers("") // Empty string as we don't have a band ID yet
+  
+  // Form state
+  const [bandName, setBandName] = useState("")
+  const [description, setDescription] = useState("")
+  const [genre, setGenre] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // Search and member selection state
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedMembers, setSelectedMembers] = useState<{ id: string; name: string; image: string }[]>([])
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isSearching, setIsSearching] = useState(false)
+  const [selectedMembers, setSelectedMembers] = useState<{ id: string; full_name: string; avatar_url: string }[]>([])
 
-  // Mock users data for member selection
-  const users = [
-    { id: "user-1", name: "Chloe", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-2", name: "Sophie", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-3", name: "Angel", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-4", name: "Ruby", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-5", name: "Katie", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-6", name: "Paula", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-7", name: "Nagisha", image: "/placeholder.svg?height=40&width=40" },
-    { id: "user-8", name: "David", image: "/placeholder.svg?height=40&width=40" },
-  ]
-
-  // Filter users based on search term
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !selectedMembers.some((member) => member.id === user.id),
+  // Handle user search
+  useEffect(() => {
+    const handleSearch = async () => {
+      if (searchTerm.trim().length < 2) {
+        setSearchResults([])
+        return
+      }
+      
+      try {
+        setIsSearching(true)
+        const results = await searchUsers(searchTerm)
+        setSearchResults(results || [])
+      } catch (error) {
+        console.error("Error searching users:", error)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }
+    
+    // Debounce search
+    const timeoutId = setTimeout(handleSearch, 300)
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm, searchUsers])
+  
+  // Filter out already selected members
+  const filteredUsers = searchResults.filter(
+    (user) => !selectedMembers.some((member) => member.id === user.id)
   )
 
   // Add member to selected members
-  const addMember = (user: { id: string; name: string; image: string }) => {
+  const addMember = (user: { id: string; full_name: string; avatar_url: string }) => {
     setSelectedMembers([...selectedMembers, user])
     setSearchTerm("")
   }
@@ -46,6 +74,55 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
   // Remove member from selected members
   const removeMember = (userId: string) => {
     setSelectedMembers(selectedMembers.filter((member) => member.id !== userId))
+  }
+  
+  // Handle form submission
+  const handleSubmit = async () => {
+    if (!bandName.trim()) {
+      toast.error("Please enter a band name")
+      return
+    }
+    
+    try {
+      setIsSubmitting(true)
+      
+      // Create the band
+      const result = await createBand({
+        name: bandName.trim(),
+        description: description.trim() || undefined,
+        // We could add genre and image_url here if needed
+      })
+      
+      if (result.error) {
+        throw result.error
+      }
+      
+      if (!result.band) {
+        throw new Error("Failed to create band")
+      }
+      
+      // Add the current user as a member with 'creator' role
+      const bandId = result.band.id
+      if (user?.id) {
+        await result.addBandMember(bandId, user.id, 'creator')
+      }
+      
+      // Add selected members to the band
+      const addMemberPromises = selectedMembers.map(member => 
+        result.addBandMember(bandId, member.id)
+      )
+      
+      await Promise.all(addMemberPromises)
+      
+      toast.success("Band created successfully!")
+      onCancel() // Go back to bands screen
+      
+    } catch (error) {
+      console.error("Error creating band:", error)
+      toast.error("Failed to create band. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -62,7 +139,14 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium mb-2">Band Name</label>
-              <Input placeholder="Enter band name" className="w-full" />
+              <Input 
+                placeholder="Enter band name" 
+                className="w-full" 
+                value={bandName}
+                onChange={(e) => setBandName(e.target.value)}
+                disabled={isSubmitting}
+                required
+              />
             </div>
 
             <div>
@@ -72,11 +156,18 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
                   <Camera className="h-6 w-6" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-1">Image upload will be available soon</p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Description</label>
-              <Textarea placeholder="Describe your band..." className="min-h-[120px]" />
+              <Textarea 
+                placeholder="Describe your band..." 
+                className="min-h-[120px]" 
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isSubmitting}
+              />
             </div>
 
             <div>
@@ -98,12 +189,13 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
                     {selectedMembers.map((member) => (
                       <div key={member.id} className="flex items-center bg-[#ffd2b0] rounded-full pl-1 pr-2 py-1">
                         <Avatar className="h-6 w-6 mr-1">
-                          <Image src={member.image || "/placeholder.svg"} alt={member.name} width={24} height={24} />
+                          <Image src={member.avatar_url || "/placeholder.svg"} alt={member.full_name} width={24} height={24} />
                         </Avatar>
-                        <span className="text-sm">{member.name}</span>
+                        <span className="text-sm">{member.full_name}</span>
                         <button
                           className="ml-1 text-gray-600 hover:text-gray-900"
                           onClick={() => removeMember(member.id)}
+                          disabled={isSubmitting}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -115,26 +207,37 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
                 {/* Search results */}
                 {searchTerm && (
                   <div className="border rounded-md mt-1 max-h-60 overflow-y-auto">
-                    {filteredUsers.length > 0 ? (
+                    {isSearching ? (
+                      <div className="p-3 text-center">
+                        <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                        <p className="text-sm text-muted-foreground mt-2">Searching...</p>
+                      </div>
+                    ) : filteredUsers.length > 0 ? (
                       filteredUsers.map((user) => (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => addMember(user)}
+                          className={`flex items-center justify-between p-2 hover:bg-gray-100 ${isSubmitting ? 'opacity-50' : 'cursor-pointer'}`}
+                          onClick={isSubmitting ? undefined : () => addMember({
+                            id: user.id,
+                            full_name: user.full_name,
+                            avatar_url: user.avatar_url
+                          })}
                         >
                           <div className="flex items-center">
                             <Avatar className="h-8 w-8 mr-2">
-                              <Image src={user.image || "/placeholder.svg"} alt={user.name} width={32} height={32} />
+                              <Image src={user.avatar_url || "/placeholder.svg"} alt={user.full_name} width={32} height={32} />
                             </Avatar>
-                            <span>{user.name}</span>
+                            <span>{user.full_name}</span>
                           </div>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" disabled={isSubmitting}>
                             <Plus className="h-4 w-4" />
                           </Button>
                         </div>
                       ))
-                    ) : (
+                    ) : searchTerm.length >= 2 ? (
                       <div className="p-3 text-center text-gray-500">No users found</div>
+                    ) : (
+                      <div className="p-3 text-center text-gray-500">Type at least 2 characters to search</div>
                     )}
                   </div>
                 )}
@@ -143,7 +246,12 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
 
             <div>
               <label className="block text-sm font-medium mb-2">Primary Genre</label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background">
+              <select 
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                disabled={isSubmitting}
+              >
                 <option value="">Select a genre</option>
                 <option value="rock">Rock</option>
                 <option value="pop">Pop</option>
@@ -154,6 +262,7 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
                 <option value="country">Country</option>
                 <option value="reggae">Reggae</option>
               </select>
+              <p className="text-xs text-muted-foreground mt-1">Optional - you can add more genres later</p>
             </div>
           </div>
         </div>
@@ -161,11 +270,27 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
 
       <div className="p-4 md:p-6 border-t flex justify-end">
         <div className="flex gap-2 w-full md:w-auto">
-          <Button variant="outline" className={isDesktop ? "" : "flex-1"} onClick={onCancel}>
+          <Button 
+            variant="outline" 
+            className={isDesktop ? "" : "flex-1"} 
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button className={`bg-[#ffac6d] hover:bg-[#fdc193] text-black ${isDesktop ? "" : "flex-1"}`}>
-            Create Band
+          <Button 
+            className={`bg-[#ffac6d] hover:bg-[#fdc193] text-black ${isDesktop ? "" : "flex-1"}`}
+            onClick={handleSubmit}
+            disabled={isSubmitting || !bandName.trim()}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Band"
+            )}
           </Button>
         </div>
       </div>
