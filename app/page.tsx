@@ -32,6 +32,24 @@ export default function Home() {
           router.push('/login')
         } else {
           setIsLoading(false)
+          
+          // Check URL parameters for navigation
+          if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            
+            // Check for event parameter
+            const eventId = params.get('event');
+            if (eventId) {
+              setSelectedEvent(eventId);
+              setActiveScreen('event');
+            }
+            
+            // Check for tab parameter
+            const tab = params.get('tab');
+            if (tab === 'profile') {
+              setActiveScreen('profile');
+            }
+          }
         }
       } catch (error) {
         console.error('Error checking session:', error)
