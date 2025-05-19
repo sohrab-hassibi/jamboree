@@ -15,6 +15,12 @@ export interface ChatMessage {
   };
 }
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string;
+}
+
 export function useEventChat(eventId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,7 +84,7 @@ export function useEventChat(eventId: string) {
           
           // Attach user data to messages
           messages.forEach(message => {
-            message.user = userMap[message.user_id] || null;
+            message.user = userMap[message.user_id] || undefined;
           });
         }
       }
@@ -121,7 +127,25 @@ export function useEventChat(eventId: string) {
     try {
       console.log('Sending message for event:', eventId, 'user:', user.id);
       
-      // Simplify the insert - don't try to fetch related data in the same query
+      // Create a temporary message object with a temporary ID
+      const tempId = `temp-${Date.now()}`;
+      const tempMessage: ChatMessage = {
+        id: tempId,
+        event_id: eventId,
+        user_id: user.id,
+        text,
+        created_at: new Date().toISOString(),
+        user: {
+          id: user.id,
+          full_name: user.user_metadata?.full_name || 'You',
+          avatar_url: user.user_metadata?.avatar_url || '/placeholder.svg'
+        }
+      };
+      
+      // Immediately add the message to the local state for instant feedback
+      setMessages(prevMessages => [...prevMessages, tempMessage]);
+      
+      // Then send it to the database
       const { data, error } = await supabase
         .from('event_messages')
         .insert([
@@ -140,11 +164,15 @@ export function useEventChat(eventId: string) {
           details: error.details,
           hint: error.hint
         });
+        
+        // Remove the temporary message if there was an error
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== tempId));
         throw error;
       }
       
       console.log('Message sent successfully:', data);
-      // Don't need to update state as the subscription will handle this
+      // The real message will be added by the subscription, and we'll filter out the temp message
+      // when we receive the real one with the same text and user_id
     } catch (err) {
       if (err instanceof Error) {
         console.error('Error sending message:', {
@@ -192,13 +220,44 @@ export function useEventChat(eventId: string) {
               console.warn('Error fetching user data for message:', userError);
             }
             
-            const newMessage = {
-              ...payload.new,
-              user: userData || null
+            // Create a properly typed ChatMessage object
+            const newMessage: ChatMessage = {
+              id: payload.new.id,
+              event_id: payload.new.event_id,
+              user_id: payload.new.user_id,
+              text: payload.new.text,
+              created_at: payload.new.created_at,
+              user: userData || undefined
             };
 
             console.log('Adding new message to UI:', newMessage);
-            setMessages(prevMessages => [...prevMessages, newMessage as ChatMessage]);
+            
+            // Check if we already have a temporary message with the same content
+            // This prevents duplicate messages when we've already added a temp message
+            setMessages(prevMessages => {
+              // Look for temp messages with the same text and user_id
+              const hasTempMessage = prevMessages.some(msg => 
+                msg.id.toString().startsWith('temp-') && 
+                msg.text === newMessage.text && 
+                msg.user_id === newMessage.user_id &&
+                // Only consider messages created in the last minute as potential duplicates
+                (new Date().getTime() - new Date(msg.created_at).getTime() < 60000)
+              );
+              
+              if (hasTempMessage) {
+                // Replace the temp message with the real one
+                return prevMessages
+                  .filter(msg => !(
+                    msg.id.toString().startsWith('temp-') && 
+                    msg.text === newMessage.text && 
+                    msg.user_id === newMessage.user_id
+                  ))
+                  .concat(newMessage);
+              } else {
+                // Just add the new message
+                return [...prevMessages, newMessage];
+              }
+            });
           } catch (err) {
             console.error('Error processing real-time message:', err);
           }
