@@ -1,14 +1,49 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
-import { ArrowRight, Check, X, ChevronLeft, Share2, Heart, Send } from "lucide-react"
+import { ArrowRight, Check, X, ChevronLeft, Share2, Heart, Send, CheckCircle } from "lucide-react"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useEventParticipation } from "@/hooks/use-event-participation"
+import { ParticipantCard } from "@/components/participant-card"
+import { Participant } from "@/hooks/use-event"
 
-export default function EventDetailScreen() {
+const musicIcons = [
+  { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
+  { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
+  { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
+  { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
+  { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
+  { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
+  { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
+  { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
+  { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
+  { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
+  { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
+  { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
+  { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
+  { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
+  { id: "country", name: "Country", emoji: "🤠", type: "genre" },
+  { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
+];
+
+interface EventDetailScreenProps {
+  eventId: string;
+  onBack?: () => void;
+}
+
+export default function EventDetailScreen({ eventId, onBack }: EventDetailScreenProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const { 
+    status: participationStatus, 
+    isLoading, 
+    handleGoing, 
+    handleMaybe,
+    participants
+  } = useEventParticipation(eventId)
 
   return (
     <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm lg:my-6 flex flex-col">
@@ -21,8 +56,11 @@ export default function EventDetailScreen() {
           className="w-full h-full object-cover"
         />
         <div className="absolute top-0 left-0 right-0 p-4 flex items-center">
-          {!isDesktop && (
-            <button className="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full">
+          {!isDesktop && onBack && (
+            <button 
+              onClick={onBack}
+              className="w-8 h-8 flex items-center justify-center bg-white bg-opacity-80 rounded-full"
+            >
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
@@ -128,12 +166,48 @@ export default function EventDetailScreen() {
               </div>
             </div>
 
-            {isDesktop && (
-              <div className="flex gap-2">
-                <Button className="bg-[#ffac6d] hover:bg-[#fdc193] text-black">I'm Going</Button>
-                <Button variant="outline">Maybe</Button>
-              </div>
-            )}
+            <div className={`flex flex-col sm:flex-row gap-2 ${isDesktop ? '' : 'mt-4'}`}>
+              <Button 
+                onClick={handleGoing}
+                disabled={isLoading}
+                variant={participationStatus === 'going' ? 'default' : 'outline'}
+                className={`flex-1 justify-center ${participationStatus === 'going' 
+                  ? 'bg-orange-50 hover:bg-orange-50 border-orange-200 text-orange-700' 
+                  : 'hover:bg-gray-50'}`}
+              >
+                {participationStatus === 'going' ? (
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                )}
+                I'm Going
+              </Button>
+              <Button 
+                onClick={handleMaybe}
+                disabled={isLoading}
+                variant={participationStatus === 'maybe' ? 'default' : 'outline'}
+                className={`flex-1 justify-center ${participationStatus === 'maybe' 
+                  ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' 
+                  : 'hover:bg-gray-50'}`}
+              >
+                {participationStatus === 'maybe' ? (
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                )}
+                Maybe
+              </Button>
+              {(participationStatus === 'going' || participationStatus === 'maybe') && (
+                <Button 
+                  onClick={participationStatus === 'going' ? handleMaybe : handleGoing}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-gray-500 hover:text-gray-700 mt-1 sm:mt-0"
+                >
+                  Change to {participationStatus === 'going' ? 'Maybe' : 'Going'}
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
@@ -147,41 +221,45 @@ export default function EventDetailScreen() {
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <h2 className="font-medium">Participants</h2>
-              <div className="text-sm text-[#ffac6d]">14 Going · 7 Maybe</div>
+              <div className="text-sm text-[#ffac6d]">
+                {participationStatus === 'going' ? 'You\'re going' : participationStatus === 'maybe' ? 'You might go' : 'Not going'}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {[
-                { name: "Tommy", host: true },
-                { name: "Chloe" },
-                { name: "Sophie" },
-                { name: "Angel" },
-                { name: "Ruby" },
-                { name: "Katie" },
-                { name: "Paula" },
-                { name: "Nagisha" },
-              ].map((person, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-[#ffd2b0]">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="w-8 h-8">
-                      <Image src="/placeholder.svg?height=32&width=32" alt={person.name} width={32} height={32} />
+            <div className="mb-3">
+              <div className="flex border-b">
+                <button className="px-4 py-2 font-medium border-b-2 border-orange-500 text-orange-600">
+                  Going ({participants.going.length || 0})
+                </button>
+                <button className="px-4 py-2 font-medium text-gray-500">
+                  Maybe ({participants.maybe.length || 0})
+                </button>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              {participants.going.map((participant) => (
+                <div key={participant.id} className="bg-[#ffd2b0] rounded-lg p-3 flex justify-between items-center">
+                  <div className="flex items-start gap-2">
+                    <Avatar className="w-6 h-6 flex-shrink-0">
+                      <Image src={participant.avatar_url || '/placeholder.svg'} alt={participant.full_name || 'User'} width={24} height={24} />
                     </Avatar>
-                    <span>
-                      {person.name} {person.host && "(HOST)"}
-                    </span>
-                  </div>
-                  <div>
-                    {i % 2 === 0 ? (
-                      <ArrowRight className="h-5 w-5" />
-                    ) : i % 3 === 0 ? (
-                      <Check className="h-5 w-5" />
-                    ) : (
-                      <X className="h-5 w-5" />
-                    )}
+                    <div>
+                      <div className="text-sm font-medium">{participant.full_name}</div>
+                      <div className="flex mt-1 gap-1">
+                        <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
+                        <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
+              
+              {participants.going.length === 0 && (
+                <div className="text-center py-4 text-gray-500">No participants yet</div>
+              )}
             </div>
+          </div>
           </div>
         </div>
 
@@ -221,7 +299,6 @@ export default function EventDetailScreen() {
                   <Send className="h-4 w-4 text-gray-400" />
                 </button>
               </div>
-            </div>
           </div>
         )}
       </div>

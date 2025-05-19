@@ -2,15 +2,20 @@
 import { useState, useEffect } from "react";
 import type React from "react";
 import { useRouter } from "next/navigation";
-
+import { createClientComponentClient, User } from "@supabase/auth-helpers-nextjs";
+import { useAuth } from "@/context/SupabaseContext";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/lib/supabase";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Check, X, LogOut, Calendar, Clock, MapPin } from "lucide-react";
-import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
+import { Check, X } from "lucide-react";
+
+type ProfileData = {
+  name: string;
+  bio: string;
+  selectedIcons: string[];
+};
 
 // Define the music icon types
 type MusicIcon = {
@@ -20,175 +25,19 @@ type MusicIcon = {
   type: "instrument" | "genre";
 };
 
-// Upcoming Events Component
-function UpcomingEvents() {
-  const { upcomingEvents, isLoading, error } = useUserEvents();
-  const router = useRouter();
-  
-  const formatEventDate = (startTime: string) => {
-    const start = new Date(startTime);
-    
-    // Format the date in a compact way for the cards
-    return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
-    });
-  };
-  
-  const handleEventClick = (eventId: string) => {
-    // Use the parent component's state management for navigation
-    // This will be passed from the parent ProfileScreen component
-    if (typeof window !== 'undefined') {
-      // Access the global state management through the window object
-      const event = new CustomEvent('openEvent', { detail: { eventId } });
-      window.dispatchEvent(event);
-    }
-  };
-  
-  return (
-    <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Upcoming Events</h3>
-      
-      {isLoading ? (
-        <div className="text-center py-4">
-          <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
-        </div>
-      ) : upcomingEvents.length === 0 ? (
-        <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No upcoming events</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto pb-2 hide-scrollbar">
-          <div className="flex space-x-3">
-            {upcomingEvents.map((event: UserEvent) => {
-              const dateStr = formatEventDate(event.start_time);
-              return (
-                <div
-                  key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => handleEventClick(event.id)}
-                >
-                  {/* Event image with participation indicator */}
-                  <div className="relative">
-                    <Image
-                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
-                      alt={event.title}
-                      width={200}
-                      height={100}
-                      className="w-full h-24 object-cover"
-                    />
-                    {/* Participation status indicator */}
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
-                      }`}
-                    />
-                  </div>
-                  <div className="p-2">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Post Games (Past Events) Component
-function PostGamesEvents() {
-  const { pastEvents, isLoading, error } = useUserEvents();
-  const router = useRouter();
-  
-  const formatEventDate = (startTime: string) => {
-    const start = new Date(startTime);
-    
-    return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
-    });
-  };
-  
-  const handleEventClick = (eventId: string) => {
-    // Use the parent component's state management for navigation
-    // This will be passed from the parent ProfileScreen component
-    if (typeof window !== 'undefined') {
-      // Access the global state management through the window object
-      const event = new CustomEvent('openEvent', { detail: { eventId } });
-      window.dispatchEvent(event);
-    }
-  };
-  
-  return (
-    <div>
-      <h3 className="font-medium mb-3">Post Games 👀</h3>
-      
-      {isLoading ? (
-        <div className="text-center py-4">
-          <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
-        </div>
-      ) : error ? (
-        <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
-        </div>
-      ) : pastEvents.length === 0 ? (
-        <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No past events</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto pb-2 hide-scrollbar">
-          <div className="flex space-x-3">
-            {pastEvents.map((event: UserEvent) => {
-              const dateStr = formatEventDate(event.start_time);
-              return (
-                <div
-                  key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
-                  onClick={() => handleEventClick(event.id)}
-                >
-                  {/* Event image with participation indicator */}
-                  <div className="relative">
-                    <Image
-                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
-                      alt={event.title}
-                      width={200}
-                      height={100}
-                      className="w-full h-24 object-cover"
-                    />
-                    {/* Participation status indicator */}
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
-                      }`}
-                    />
-                  </div>
-                  <div className="p-2">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const supabase = createClientComponentClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !isAuthLoading && !authUser) {
+      router.push('/login');
+    }
+  }, [authUser, isAuthLoading, loading, router]);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
@@ -217,71 +66,57 @@ export default function ProfileScreen() {
   ];
 
   // Profile state
-  const [profile, setProfile] = useState({
+  const [profile, setProfile] = useState<ProfileData>({
     name: "",
     bio: "",
-    selectedIcons: [] as string[],
-    instruments: [] as string[],
-    genres: [] as string[],
+    selectedIcons: [],
   });
 
-  // Form state for editing
-  const [formData, setFormData] = useState({
-    name: "",
-    bio: "",
-    selectedIcons: [] as string[],
-    instruments: [] as string[],
-    genres: [] as string[],
-  });
-
-  // Load user profile data
+  // Fetch user data when auth is ready
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        try {
-          // Get the user's metadata which includes the full name from signup
-          const { data: { user: userData } } = await supabase.auth.getUser();
+    const fetchUserData = async () => {
+      if (!authUser) return;
+      
+      try {
+        // Use the authUser from context directly since it's already available
+        const user = authUser;
+        
+        if (user) {
+          setUser(user);
+          // Set the profile name to the user's full name or email
+          const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+          const userBio = user.user_metadata?.bio || '';
+          const userIcons = user.user_metadata?.selected_icons || [];
           
-          // Fetch user profile data from Supabase
-          const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          // Use the name from user metadata if available, otherwise fall back to profile data
-          const userName = userData?.user_metadata?.full_name || data?.full_name || '';
-          
-          const profileData = {
+          const userProfile: ProfileData = {
             name: userName,
-            bio: data?.bio || '',
-            selectedIcons: [...(data?.instruments || []), ...(data?.genres || [])],
-            instruments: data?.instruments || [],
-            genres: data?.genres || [],
+            bio: userBio,
+            selectedIcons: Array.isArray(userIcons) ? userIcons : []
           };
           
-          setProfile(profileData);
-          setFormData(profileData);
-          
-          // If we have a name from user metadata but not in the profile, update the profile
-          if (userName && (!data || data.full_name !== userName)) {
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                full_name: userName,
-                updated_at: new Date().toISOString(),
-              });
-          }
-        } catch (error) {
-          console.error('Error fetching profile:', error);
+          setProfile(userProfile);
+          setFormData(prev => ({
+            ...prev,
+            ...userProfile,
+            selectedIcons: [...userProfile.selectedIcons]
+          }));
         }
+      } catch (error) {
+        console.error('Error in fetchUserData:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchUserProfile();
-  }, []);
+    fetchUserData();
+  }, [authUser]);
+
+  // Form state for editing
+  const [formData, setFormData] = useState<ProfileData>({
+    name: "",
+    bio: "",
+    selectedIcons: [],
+  });
 
   // Function to handle form input changes
   const handleInputChange = (
@@ -297,48 +132,28 @@ export default function ProfileScreen() {
   // Function to save profile changes
   const handleSaveProfile = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Split selectedIcons into instruments and genres
-      const instruments = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
-
-      const genres = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
-
-      // Update profile in Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
+      // Update user metadata in Supabase
+      const { error } = await supabase.auth.updateUser({
+        data: { 
           full_name: formData.name,
           bio: formData.bio,
-          instruments,
-          genres,
-          updated_at: new Date().toISOString(),
-        });
+          selected_icons: [...formData.selectedIcons] // Ensure we store a copy of the array
+        }
+      });
 
       if (error) throw error;
 
       // Update local state
-      const updatedProfile = {
+      setProfile({
         name: formData.name,
         bio: formData.bio,
-        selectedIcons: formData.selectedIcons,
-        instruments,
-        genres,
-      };
-
-      setProfile(updatedProfile);
+        selectedIcons: [...formData.selectedIcons], // Ensure we create a new array reference
+      });
+      
       setEditProfileMode(false);
       setShowIconSelector(false);
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error('Error updating profile:', error);
     }
   };
 
@@ -348,8 +163,6 @@ export default function ProfileScreen() {
       name: profile.name,
       bio: profile.bio,
       selectedIcons: [...profile.selectedIcons],
-      instruments: [...profile.instruments],
-      genres: [...profile.genres],
     });
     setEditProfileMode(false);
     setShowIconSelector(false);
@@ -361,23 +174,10 @@ export default function ProfileScreen() {
       const newSelectedIcons = prev.selectedIcons.includes(iconId)
         ? prev.selectedIcons.filter((id) => id !== iconId)
         : [...prev.selectedIcons, iconId];
-
-      // Update instruments and genres based on selected icons
-      const instruments = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
-
-      const genres = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
-
+      
       return {
         ...prev,
         selectedIcons: newSelectedIcons,
-        instruments,
-        genres,
       };
     });
   };
@@ -469,18 +269,18 @@ export default function ProfileScreen() {
             <h1 className="text-xl md:text-2xl font-bold">Edit Profile</h1>
           </div>
         </div>
-
+        
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex flex-col items-center">
-              <div className="relative inline-block">
+              <div className="relative inline-block mb-6">
                 <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
                   <Image
-                    src="/placeholder.svg?height=128&width=128"
+                    src="/placeholder.svg"
                     alt="Profile"
                     width={128}
                     height={128}
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
                 </div>
                 <button className="absolute bottom-0 right-0 bg-[#ffac6d] rounded-full p-2">
@@ -507,6 +307,8 @@ export default function ProfileScreen() {
                     />
                   </svg>
                 </button>
+              </div>
+            </div>
               </div>
             </div>
 
@@ -633,47 +435,25 @@ export default function ProfileScreen() {
     );
   }
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      router.push('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
   // Profile View Mode
   return (
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
       <div className="p-4 md:p-6 border-b flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">Profile</h1>
         {isDesktop && (
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditProfileMode(true);
-                setFormData({
-                  name: profile.name,
-                  bio: profile.bio,
-                  selectedIcons: [...profile.selectedIcons],
-                  instruments: [...profile.instruments],
-                  genres: [...profile.genres],
-                });
-              }}
-            >
-              Edit Profile
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setEditProfileMode(true);
+              setFormData({
+                name: profile.name,
+                bio: profile.bio,
+                selectedIcons: [...profile.selectedIcons],
+              });
+            }}
+          >
+            Edit Profile
+          </Button>
         )}
       </div>
 
@@ -787,12 +567,68 @@ export default function ProfileScreen() {
                   </div>
                 </div>
 
-                {/* Upcoming Events Section */}
-                <UpcomingEvents />
-
                 <div className="space-y-6">
+                  {/* Upcoming Events */}
+                  <div>
+                    <h3 className="font-medium mb-3">Upcoming Events</h3>
+                    <div className="overflow-x-auto pb-2 hide-scrollbar">
+                      <div className="flex space-x-3">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px]"
+                          >
+                            <Image
+                              src="/placeholder.svg?height=100&width=200"
+                              alt="Event"
+                              width={200}
+                              height={100}
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="p-2">
+                              <div className="font-medium text-sm">
+                                Old Peeps Jam
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Sunday 5/4
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Past Events */}
-                  <PostGamesEvents />
+                  <div>
+                    <h3 className="font-medium mb-3">Post Games 👀</h3>
+                    <div className="overflow-x-auto pb-2 hide-scrollbar">
+                      <div className="flex space-x-3">
+                        {[1, 2].map((i) => (
+                          <div
+                            key={i}
+                            className="rounded-lg overflow-hidden border opacity-70 flex-shrink-0 w-[200px]"
+                          >
+                            <Image
+                              src="/placeholder.svg?height=100&width=200"
+                              alt="Event"
+                              width={200}
+                              height={100}
+                              className="w-full h-24 object-cover"
+                            />
+                            <div className="p-2">
+                              <div className="font-medium text-sm">
+                                Spring Jam
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Sunday 4/12
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -801,29 +637,19 @@ export default function ProfileScreen() {
       </div>
 
       {!isDesktop && (
-        <div className="p-4 border-t flex flex-col space-y-2">
+        <div className="p-4 border-t">
           <Button
-            className="w-full bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+            className="w-full"
             onClick={() => {
               setEditProfileMode(true);
               setFormData({
                 name: profile.name,
                 bio: profile.bio,
                 selectedIcons: [...profile.selectedIcons],
-                instruments: [...profile.instruments],
-                genres: [...profile.genres],
               });
             }}
           >
             Edit Profile
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
           </Button>
         </div>
       )}
