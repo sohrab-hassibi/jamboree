@@ -4,10 +4,12 @@ import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, Send, Info, MessageSquare, CheckCircle, Loader2 } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useState, useMemo, useEffect } from "react"
-import Image from "next/image"
+import { useState, useMemo, useEffect, useCallback, FormEvent } from 'react'
+import Image from 'next/image'
 import { useEventParticipation } from "@/hooks/use-event-participation"
 import { useEvent, type Participant as ParticipantType, type Event as EventType } from "@/hooks/use-event"
+import { useEventChat, type ChatMessage } from '@/hooks/use-event-chat'
+import { useAuth } from '@/context/SupabaseContext'
 import { ParticipantCard } from "@/components/participant-card"
 
 // Music icons data
@@ -106,23 +108,30 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
     return `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`
   }, [event?.start_time, event?.end_time])
 
-  // Mock messages for now - replace with real messages from the database
-  const messages = useMemo(() => [
-    { 
-      id: '1', 
-      text: "Hey team! Just a reminder about our meetup today.", 
-      sender: event?.creator_id || 'Host', 
-      time: '9:30 AM', 
-      isUser: false 
-    },
-    { 
-      id: '2', 
-      text: "I'll be a few minutes late, sorry!", 
-      sender: 'You', 
-      time: '9:35 AM', 
-      isUser: true 
-    },
-  ], [event?.creator_id])
+  // Use the event chat hook for real-time messaging
+  const { messages, isLoading: isLoadingMessages, error: messagesError, sendMessage } = useEventChat(eventId);
+  const { user } = useAuth();
+  
+  // State for the new message input
+  const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  // Handle sending a new message
+  const handleSendMessage = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || isSending) return;
+    
+    setIsSending(true);
+    const result = await sendMessage(newMessage.trim());
+    setIsSending(false);
+    
+    if (result?.success) {
+      setNewMessage(''); // Clear input after sending
+    } else if (result?.error) {
+      console.error('Failed to send message:', result.error);
+      // You could add a toast notification here for error feedback
+    }
+  };
 
   if (isLoadingEvent) {
     return (
@@ -573,43 +582,67 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       ) : (
         <div className="flex flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-            {messages.map((message) => {
-              const isCurrentUser = message.sender === 'You';
-              return (
-                <div key={message.id} className={`flex items-start ${isCurrentUser ? "justify-end gap-2" : "gap-2"}`}>
-                  {!isCurrentUser && (
-                    <Avatar className="w-8 h-8">
-                      <Image 
-                        src={
-                          isCurrentUser 
-                            ? '/placeholder.svg' // Replace with user's avatar if available
-                            : '/placeholder.svg?height=32&width=32' // Replace with sender's avatar
-                        } 
-                        alt={message.sender} 
-                        width={32} 
-                        height={32} 
-                        className="object-cover"
-                      />
-                    </Avatar>
-                  )}
-                  <div>
-                    {!isCurrentUser && <div className="text-xs text-gray-500">{message.time}</div>}
-                    <div className={`${isCurrentUser ? "bg-[#ffd2b0]" : "bg-gray-100"} rounded-lg p-2 mt-1 max-w-xs`}>
-                      <p className="text-sm">{message.text}</p>
+            {isLoadingMessages ? (
+              <div className="flex justify-center my-4">
+                <Loader2 className="h-6 w-6 animate-spin text-[#ffac6d]" />
+              </div>
+            ) : messagesError ? (
+              <div className="text-center text-red-500 my-4">Error loading messages</div>
+            ) : messages.length === 0 ? (
+              <div className="text-center text-gray-500 my-4">
+                No messages yet. Be the first to say hello!
+              </div>
+            ) : (
+              <>
+                {messages.map((message) => {
+                  const isCurrentUser = message.user_id === user?.id;
+                  const messageDate = new Date(message.created_at);
+                  const messageTime = messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                  
+                  return (
+                    <div key={message.id} className={`flex items-start ${isCurrentUser ? "justify-end gap-2" : "gap-2"}`}>
+                      {!isCurrentUser ? (
+                        <Avatar className="w-8 h-8">
+                          <Image 
+                            src={message.user?.avatar_url || '/placeholder.svg'} 
+                            alt={message.user?.full_name || 'User'} 
+                            width={32} 
+                            height={32} 
+                            className="object-cover"
+                          />
+                        </Avatar>
+                      ) : (
+                        <Avatar className="w-8 h-8 order-1">
+                          <Image 
+                            src={user?.user_metadata?.avatar_url || '/placeholder.svg'} 
+                            alt="You" 
+                            width={32} 
+                            height={32} 
+                            className="object-cover"
+                          />
+                        </Avatar>
+                      )}
+                      <div className={`${isCurrentUser ? 'w-full flex flex-col items-end' : ''}`}>
+                        {!isCurrentUser ? (
+                          <div className="flex items-center gap-2">
+                            <div className="text-xs font-medium">{message.user?.full_name || 'User'}</div>
+                            <div className="text-xs text-gray-500">{messageTime}</div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            <div className="text-xs text-gray-500">{messageTime}</div>
+                            <div className="text-xs font-medium">You</div>
+                          </div>
+                        )}
+                        <div className={`${isCurrentUser ? "bg-[#ffd2b0]" : "bg-gray-100"} rounded-lg p-2 mt-1 inline-block max-w-xs`}>
+                          <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            <div className="text-center text-xs text-gray-500 my-4">Your message previewed</div>
-
-            <div className="flex items-center gap-2">
-              <Avatar className="w-8 h-8">
-                <Image src="/placeholder.svg?height=32&width=32" alt="User" width={32} height={32} />
-              </Avatar>
-              <div className="text-sm text-gray-500">David, Melissa, Olivia typing...</div>
-            </div>
+                  );
+                })}
+              </>
+            )}
           </div>
 
           {isDesktop && (
@@ -716,22 +749,28 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       )}
 
       {activeView === 'chat' && (
-        <div className="border-t p-4">
-          <div className="flex items-center gap-2">
-            <Input
-              className="flex-1"
-              placeholder="Type a message..."
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  // Handle send message
-                }
-              }}
+        <div className="border-t p-3">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            <Input 
+              placeholder="Type your message..." 
+              className="flex-1" 
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              disabled={isSending}
             />
-            <Button size="icon" variant="ghost">
-              <Send className="h-5 w-5" />
+            <Button 
+              type="submit" 
+              size="icon" 
+              className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+              disabled={!newMessage.trim() || isSending}
+            >
+              {isSending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
             </Button>
-          </div>
+          </form>
         </div>
       )}
     </div>
