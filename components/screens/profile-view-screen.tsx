@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Calendar, MapPin } from "lucide-react";
 import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
+import { useRouter } from "next/navigation";
 
 // Define the music icon types
 type MusicIcon = {
@@ -376,10 +377,27 @@ interface ProfileScreenProps {
 }
 
 export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
+  const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Function to handle back button click
+  const handleBackClick = () => {
+    // Check if there's a stored event ID in session storage
+    const referringEventId = sessionStorage.getItem('referringEventId');
+    
+    if (referringEventId) {
+      // Navigate back to the specific event
+      router.push(`/?event=${referringEventId}`);
+      // Clear the stored event ID
+      sessionStorage.removeItem('referringEventId');
+    } else {
+      // Try to go back in history if possible
+      window.history.back();
+    }
+  };
 
   // Music icons data
   const musicIcons: MusicIcon[] = [
@@ -471,7 +489,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
         <h2 className="text-2xl font-bold mb-4">User Not Found</h2>
         <p className="text-gray-600 mb-6">{error || 'The profile you\'re looking for doesn\'t exist.'}</p>
         <Button 
-          onClick={() => window.history.back()}
+          onClick={handleBackClick}
           className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
         >
           Go Back
@@ -487,7 +505,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
         <Button 
           variant="outline"
           className="text-sm"
-          onClick={() => window.history.back()}
+          onClick={handleBackClick}
         >
           Back
         </Button>

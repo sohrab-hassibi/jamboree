@@ -221,6 +221,11 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
   }
 
   const navigateToProfile = (userId: string, name: string) => {
+    // Store the current event ID in session storage before navigating
+    if (typeof window !== 'undefined' && eventId) {
+      sessionStorage.setItem('referringEventId', eventId);
+    }
+    
     // Navigate to user profile
     console.log(`Navigating to ${name}'s profile (${userId})`);
     // Navigate to the user's profile page
