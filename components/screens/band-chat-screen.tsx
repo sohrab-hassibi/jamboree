@@ -369,7 +369,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
                       <Avatar className="w-8 h-8">
                         <Image 
                           src={message.user?.avatar_url || '/placeholder.svg'} 
-                          alt={message.user?.full_name || 'User'} 
+                          alt={message.user?.full_name || "Unknown member"} 
                           width={32} 
                           height={32} 
                           className="object-cover"
@@ -389,7 +389,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
                     <div className={`${isCurrentUser ? 'w-full flex flex-col items-end' : ''}`}>
                       {!isCurrentUser ? (
                         <div className="flex items-center gap-2">
-                          <div className="text-xs font-medium">{message.user?.full_name || 'User'}</div>
+                          <div className="text-xs font-medium">{message.user?.full_name || "Unknown member"}</div>
                           <div className="text-xs text-gray-500">{messageTime}</div>
                         </div>
                       ) : (

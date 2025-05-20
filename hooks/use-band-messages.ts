@@ -34,68 +34,80 @@ export function useBandMessages(bandId: string) {
       setIsLoading(true);
       console.log('Fetching messages for band:', bandId);
       
-      // First, try a simple query without joins to check basic access
-      const { data: simpleData, error: simpleError } = await supabase
+      // Fetch messages for the band
+      const { data: messagesData, error: messagesError } = await supabase
         .from('band_messages')
         .select('id, band_id, user_id, text, created_at')
         .eq('band_id', bandId)
         .order('created_at', { ascending: true });
 
-      if (simpleError) {
-        console.log('Basic query error:', {
-          code: simpleError.code,
-          message: simpleError.message,
-          details: simpleError.details,
-          hint: simpleError.hint
+      if (messagesError) {
+        console.log('Error fetching messages:', {
+          code: messagesError.code,
+          message: messagesError.message,
+          details: messagesError.details,
+          hint: messagesError.hint
         });
         
         // Don't show error UI for certain types of errors
-        if (simpleError.message.includes('does not exist') || 
-            simpleError.message.includes('relation') || 
-            simpleError.code === '42P01') {
+        if (messagesError.message.includes('does not exist') || 
+            messagesError.message.includes('relation') || 
+            messagesError.code === '42P01') {
           console.log('Table does not exist error detected - returning empty messages array');
           setMessages([]);
           setIsLoading(false);
           return;
         } else {
-          setError(new Error(simpleError.message || 'Failed to fetch messages'));
+          setError(new Error(messagesError.message || 'Failed to fetch messages'));
           setIsLoading(false);
           return;
         }
       }
       
-      // Step 2: If the simple query worked, fetch user data separately
-      let messagesData = simpleData || [];
+      // If no messages, return empty array
+      if (!messagesData || messagesData.length === 0) {
+        setMessages([]);
+        setIsLoading(false);
+        return;
+      }
       
       // Get unique user IDs from messages
       const userIds = [...new Set(messagesData.map(m => m.user_id))];
       
-      if (userIds.length > 0) {
-        const { data: userData, error: userError } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url')
-          .in('id', userIds);
-          
-        if (userError) {
-          console.log('Error fetching user data:', userError);
-          // Continue without user data rather than failing completely
-        } else if (userData) {
-          // Create a map of user IDs to user data for quick lookup
-          const userMap: Record<string, any> = {};
-          userData.forEach((user: any) => {
-            userMap[user.id] = user;
-          });
-          
-          // Attach user data to messages
-          messagesData = messagesData.map(message => ({
-            ...message,
-            user: userMap[message.user_id] || null
-          }));
-        }
+      // Fetch user details for all users at once
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+      
+      if (userError) {
+        console.error('Error fetching user details:', userError);
+        // Continue with messages but without user details
+        setMessages(messagesData);
+        setIsLoading(false);
+        return;
       }
       
-      setMessages(messagesData);
-      console.log('Successfully fetched', messagesData.length, 'messages');
+      // Create a map of user IDs to user data for quick lookup
+      const userMap: Record<string, any> = {};
+      if (userData) {
+        userData.forEach(user => {
+          userMap[user.id] = user;
+        });
+      }
+      
+      // Attach user data to messages
+      const messagesWithUsers = messagesData.map(message => ({
+        ...message,
+        user: userMap[message.user_id] || {
+          id: message.user_id,
+          full_name: 'Unknown member',
+          avatar_url: '/placeholder.svg'
+        }
+      }));
+      
+      setMessages(messagesWithUsers);
+      console.log('Successfully fetched', messagesWithUsers.length, 'messages');
       
     } catch (err) {
       // Log detailed error information
@@ -216,9 +228,9 @@ export function useBandMessages(bandId: string) {
           console.log('Received new message via real-time:', payload);
           
           try {
-            // When we receive a new message, fetch the user data
+            // When we receive a new message, fetch the user data from users table
             const { data: userData, error: userError } = await supabase
-              .from('profiles')
+              .from('users')
               .select('id, full_name, avatar_url')
               .eq('id', payload.new.user_id)
               .single();
