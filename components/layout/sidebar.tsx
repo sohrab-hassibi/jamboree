@@ -101,7 +101,16 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
         className={`p-5 border-b cursor-pointer transition-colors ${
           activeScreen === "profile" ? "bg-[#ffd2b0]" : "hover:bg-gray-100"
         }`}
-        onClick={() => setActiveScreen("profile")}
+        onClick={() => {
+          // Always navigate to the current user's profile
+          if (window.location.pathname.includes('/profile/')) {
+            // If we're on another user's profile, go back to main app with profile tab selected
+            window.location.href = '/?tab=profile';
+          } else {
+            // If we're already in the main app, just switch to profile tab
+            setActiveScreen("profile");
+          }
+        }}
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">

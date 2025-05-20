@@ -6,6 +6,7 @@ import { ChevronLeft, Send, Info, MessageSquare, CheckCircle, Loader2 } from "lu
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useState, useMemo, useEffect, useCallback, FormEvent } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useEventParticipation } from "@/hooks/use-event-participation"
 import { useEvent, type Participant as ParticipantType, type Event as EventType } from "@/hooks/use-event"
 import { useEventChat, type ChatMessage } from '@/hooks/use-event-chat'
@@ -55,6 +56,7 @@ interface EventScreenProps {
 }
 
 export default function EventScreen({ eventId, activeView, setActiveView, onBack }: EventScreenProps) {
+  const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [activeTab, setActiveTab] = useState<"going" | "maybe">("going")
   const { 
@@ -219,10 +221,15 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
   }
 
   const navigateToProfile = (userId: string, name: string) => {
+    // Store the current event ID in session storage before navigating
+    if (typeof window !== 'undefined' && eventId) {
+      sessionStorage.setItem('referringEventId', eventId);
+    }
+    
     // Navigate to user profile
-    console.log(`Navigating to ${name}'s profile (${userId})`)
-    // You can use Next.js router here to navigate to the user's profile
-    // router.push(`/profile/${userId}`)
+    console.log(`Navigating to ${name}'s profile (${userId})`);
+    // Navigate to the user's profile page
+    router.push(`/profile/${userId}`);
   }
   
   // Handle participant click

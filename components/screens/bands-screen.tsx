@@ -2,11 +2,13 @@
 
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { PlusCircle } from "lucide-react"
+import { PlusCircle, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import BandChatScreen from "./band-chat-screen"
+import { useBands, type Band } from "@/hooks/use-bands"
+import { formatDistanceToNow } from "date-fns"
 
 interface BandsScreenProps {
   onCreateBand?: () => void
@@ -15,48 +17,38 @@ interface BandsScreenProps {
 export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
   const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [selectedBand, setSelectedBand] = useState<string | null>(null)
-
-  const bands = [
-    {
-      id: "band-1",
-      name: "The ideal conditions",
-      message: "Candy: ya I think I have spare headphones",
-      time: "10:42 AM",
-      image: "/placeholder.svg?height=64&width=64",
-      unread: 2,
-    },
-    {
-      id: "band-2",
-      name: "Lulu & Tommy",
-      message: "You: I'm outside! :)",
-      time: "Yesterday",
-      image: "/placeholder.svg?height=64&width=64",
-      unread: 0,
-    },
-    {
-      id: "band-3",
-      name: "Old Peeps Jam",
-      message: "Sophia: white cheddar cheezits omg",
-      time: "Tuesday",
-      image: "/placeholder.svg?height=64&width=64",
-      unread: 5,
-    },
-    {
-      id: "band-4",
-      name: "Jazz Collective",
-      message: "Mark: Let's meet at 7pm for rehearsal",
-      time: "Monday",
-      image: "/placeholder.svg?height=64&width=64",
-      unread: 0,
-    },
+  const { bands, isLoading, error, fetchBands } = useBands()
+  
+  // Format the last message for each band
+  const getBandLastMessage = (band: Band) => {
+    if (!band.last_message) {
+      return {
+        message: "No messages yet",
+        time: formatDistanceToNow(new Date(band.updated_at), { addSuffix: true }),
+        unread: 0
+      };
+    }
+    
+    // Format the message with sender name if available
+    const message = band.last_message.user_full_name 
+      ? `${band.last_message.user_full_name}: ${band.last_message.text}` 
+      : band.last_message.text;
+      
+    return {
+      message,
+      time: formatDistanceToNow(new Date(band.last_message.created_at), { addSuffix: true }),
+      unread: 0 // We'll implement unread count later
+    };
+  };
+  
+  // Add some mock bands if needed for testing
+  const mockBands = [
     {
       id: "band-5",
       name: "Acoustic Sessions",
-      message: "Emma: Can someone bring an extra mic?",
-      time: "5/1/24",
-      image: "/placeholder.svg?height=64&width=64",
-      unread: 1,
-    },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
   ]
 
   // Function to handle opening a chat
@@ -69,54 +61,85 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
     setSelectedBand(null)
   }
 
-  // If a band is selected, show the chat screen
-  if (selectedBand) {
+  // If a band is selected and not in desktop mode, show the chat screen
+  if (selectedBand && !isDesktop) {
     return <BandChatScreen bandId={selectedBand} onBack={handleBackToBands} />
   }
 
   return (
-    <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
-      <header className="p-4 md:p-6 border-b flex items-center justify-between">
-        <h1 className="text-xl md:text-2xl font-bold">Your bands</h1>
-        {isDesktop && (
-          <Button className="bg-[#ffac6d] hover:bg-[#fdc193] text-black" onClick={onCreateBand}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Create New Band
-          </Button>
-        )}
-      </header>
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="divide-y">
-          {bands.map((band) => (
-            <div
-              key={band.id}
-              className="p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-              onClick={() => handleOpenChat(band.id)}
+    <div className="flex h-full w-full flex-col overflow-hidden bg-background lg:flex-row">
+      {!selectedBand || !isDesktop ? (
+        <div className="flex h-full w-full flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b p-4 md:p-6">
+            <h1 className="text-xl md:text-2xl font-bold">Bands</h1>
+            <Button
+              className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+              onClick={onCreateBand}
             >
-              <div className="flex items-center">
-                <Avatar className="h-12 w-12 mr-3">
-                  <Image src={band.image || "/placeholder.svg"} alt={band.name} width={48} height={48} />
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <h3 className="font-semibold truncate">{band.name}</h3>
-                    <span className="text-xs text-gray-500 ml-2 flex-shrink-0">{band.time}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 truncate">{band.message}</p>
-                </div>
-                {band.unread > 0 && (
-                  <div className="ml-2 bg-[#ffac6d] text-black rounded-full h-5 min-w-5 flex items-center justify-center text-xs px-1">
-                    {band.unread}
-                  </div>
-                )}
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create Band
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto">
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            </div>
-          ))}
+            ) : error ? (
+              <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+                <p className="text-muted-foreground">Failed to load bands</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => fetchBands()}>
+                  Retry
+                </Button>
+              </div>
+            ) : bands.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+                <p className="text-muted-foreground">You don't have any bands yet</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={onCreateBand}>
+                  Create a band
+                </Button>
+              </div>
+            ) : (
+              bands.map((band) => (
+                <div
+                  key={band.id}
+                  className="flex cursor-pointer items-center gap-3 border-b px-4 py-3 transition-colors hover:bg-accent"
+                  onClick={() => setSelectedBand(band.id)}
+                >
+                  <Avatar className="h-12 w-12 border">
+                    <Image
+                      src="/placeholder.svg"
+                      alt={band.name}
+                      width={48}
+                      height={48}
+                    />
+                  </Avatar>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{band.name}</h3>
+                      <span className="text-xs text-muted-foreground">
+                        {getBandLastMessage(band).time}
+                      </span>
+                    </div>
+                    <p className="truncate text-sm text-muted-foreground">
+                      {getBandLastMessage(band).message}
+                    </p>
+                  </div>
+                  {getBandLastMessage(band).unread > 0 && (
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                      {getBandLastMessage(band).unread}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <BandChatScreen bandId={selectedBand} onBack={handleBackToBands} />
+      )}
 
-      {!isDesktop && (
+      {!isDesktop && selectedBand === null && (
         <div className="p-4 border-t">
           <Button className="w-full bg-[#ffac6d] hover:bg-[#fdc193] text-black" onClick={onCreateBand}>
             <PlusCircle className="h-4 w-4 mr-2" />
