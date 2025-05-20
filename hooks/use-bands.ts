@@ -95,11 +95,36 @@ export function useBands() {
     try {
       setIsLoading(true);
       
-      // First try a simple approach - get all bands
-      // This will work with the RLS policies you've set up
+      // First, get all band IDs where the user is a member
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select('band_id')
+        .eq('user_id', user.id);
+      
+      if (memberError) {
+        console.log('Error fetching band memberships:', memberError);
+        setError(new Error(memberError.message || 'Failed to fetch band memberships'));
+        setBands([]);
+        return;
+      }
+      
+      // If user is not a member of any bands, return empty array
+      if (!memberData || memberData.length === 0) {
+        console.log('User is not a member of any bands');
+        setBands([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Extract band IDs from membership data
+      const bandIds = memberData.map(member => member.band_id);
+      console.log('User is a member of these bands:', bandIds);
+      
+      // Fetch the bands where user is a member
       const { data, error } = await supabase
         .from('bands')
         .select('*')
+        .in('id', bandIds)
         .order('updated_at', { ascending: false });
       
       // Handle any errors gracefully
@@ -110,7 +135,7 @@ export function useBands() {
         return;
       }
       
-      // The data should already be in the right format thanks to RLS
+      // The data should already be in the right format
       const bands = data || [];
       
       console.log('Fetched bands:', bands);
@@ -128,7 +153,7 @@ export function useBands() {
   }, [user]);
 
   // Create a new band
-  const createBand = useCallback(async (bandInfo: { name: string; description?: string; image_url?: string }) => {
+  const createBand = useCallback(async (bandInfo: { name: string; description?: string }) => {
     if (!user) {
       return { error: new Error('User must be authenticated to create a band') };
     }
@@ -142,7 +167,7 @@ export function useBands() {
             name: bandInfo.name,
             description: bandInfo.description || null,
             creator_id: user.id,
-            image_url: bandInfo.image_url || '/placeholder.svg?height=200&width=400'
+            image_url: '/placeholder.svg?height=200&width=400' // Default placeholder image
           }
         ])
         .select('id, name, description, creator_id, image_url, created_at, updated_at')

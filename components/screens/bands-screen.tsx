@@ -70,15 +70,14 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
     <div className="flex h-full w-full flex-col overflow-hidden bg-background lg:flex-row">
       {!selectedBand || !isDesktop ? (
         <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <h1 className="text-xl font-semibold">Bands</h1>
+          <div className="flex items-center justify-between border-b p-4 md:p-6">
+            <h1 className="text-xl md:text-2xl font-bold">Bands</h1>
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
+              className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
               onClick={onCreateBand}
             >
-              <PlusCircle className="h-5 w-5" />
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Create Band
             </Button>
           </div>
           <div className="flex-1 overflow-auto">

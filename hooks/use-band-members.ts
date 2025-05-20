@@ -152,6 +152,56 @@ export function useBandMembers(bandId: string) {
       throw err;
     }
   }, [bandId, user, fetchMembers]);
+  
+  // Leave a band (current user leaves the band)
+  const leaveBand = useCallback(async () => {
+    if (!user) {
+      throw new Error('User must be authenticated to leave a band');
+    }
+
+    try {
+      console.log('User attempting to leave band:', bandId);
+      
+      // Find the member record for the current user
+      const { data: memberData, error: memberError } = await supabase
+        .from('band_members')
+        .select('id, role')
+        .eq('band_id', bandId)
+        .eq('user_id', user.id)
+        .single();
+      
+      if (memberError) {
+        console.error('Error finding member record:', memberError);
+        throw memberError;
+      }
+      
+      if (!memberData) {
+        throw new Error('You are not a member of this band');
+      }
+      
+      // Check if the user is the creator/admin of the band
+      if (memberData.role === 'creator') {
+        throw new Error('Band creators cannot leave their band. You must transfer ownership first or delete the band.');
+      }
+      
+      // Delete the member record
+      const { error: deleteError } = await supabase
+        .from('band_members')
+        .delete()
+        .eq('id', memberData.id);
+
+      if (deleteError) {
+        console.error('Error leaving band:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('Successfully left band:', bandId);
+      return { success: true };
+    } catch (err) {
+      console.error('Error in leaveBand:', err);
+      throw err;
+    }
+  }, [bandId, user]);
 
   // Search for users to add to the band
   const searchUsers = useCallback(async (query: string) => {
@@ -273,6 +323,7 @@ export function useBandMembers(bandId: string) {
     fetchMembers,
     addMember,
     removeMember,
+    leaveBand,
     searchUsers
   };
 }

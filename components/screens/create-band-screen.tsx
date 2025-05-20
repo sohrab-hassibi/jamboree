@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Camera, ChevronLeft, Plus, Search, X, Loader2 } from "lucide-react"
+import { ChevronLeft, Plus, Search, X, Loader2 } from "lucide-react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Avatar } from "@/components/ui/avatar"
 import Image from "next/image"
@@ -147,16 +147,6 @@ export default function CreateBandScreen({ onCancel }: CreateBandScreenProps) {
                 disabled={isSubmitting}
                 required
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Band Image</label>
-              <div className="bg-gray-200 rounded-lg aspect-video flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
-                <div className="bg-white p-4 rounded-full">
-                  <Camera className="h-6 w-6" />
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Image upload will be available soon</p>
             </div>
 
             <div>

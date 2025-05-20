@@ -58,7 +58,7 @@ export function useEventChat(eventId: string) {
       
       if (userIds.length > 0) {
         const { data: userData, error: userError } = await supabase
-          .from('profiles')  // Assuming your user profiles are in a table called 'profiles'
+          .from('users')  // Fetch user data from the users table instead of profiles
           .select('id, full_name, avatar_url')
           .in('id', userIds);
           
@@ -209,9 +209,9 @@ export function useEventChat(eventId: string) {
           console.log('Received new message via real-time:', payload);
           
           try {
-            // When we receive a new message, fetch the user data
+            // When we receive a new message, fetch the user data from users table
             const { data: userData, error: userError } = await supabase
-              .from('profiles')
+              .from('users')
               .select('id, full_name, avatar_url')
               .eq('id', payload.new.user_id)
               .single();

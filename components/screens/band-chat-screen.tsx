@@ -37,7 +37,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
   const { messages, isLoading: messagesLoading, error: messagesError, sendMessage } = useBandMessages(bandId)
   
   // Get band members
-  const { members, isLoading: membersLoading, error: membersError } = useBandMembers(bandId)
+  const { members, isLoading: membersLoading, error: membersError, leaveBand } = useBandMembers(bandId)
   
   // Directly fetch band members from Supabase
   const [directMembers, setDirectMembers] = useState<any[]>([])
@@ -259,6 +259,33 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
     router.push(`/profile/${userId}`);
   }
   
+  // Handle leaving the band
+  const handleLeaveBand = async () => {
+    if (!confirm('Are you sure you want to leave this band? You will need to be invited back to rejoin.')) {
+      return;
+    }
+    
+    try {
+      // Call the function to leave the band (already extracted at the top level)
+      await leaveBand();
+      
+      // Navigate back to the bands list
+      onBack();
+    } catch (error) {
+      // Show error message
+      if (error instanceof Error) {
+        if (error.message.includes('creator')) {
+          alert('Band creators cannot leave their band. You must transfer ownership first or delete the band.');
+        } else {
+          alert(`Error leaving band: ${error.message}`);
+        }
+      } else {
+        alert('An unknown error occurred while trying to leave the band.');
+      }
+      console.error('Error leaving band:', error);
+    }
+  }
+  
   // Handle member click
   const handleMemberClick = (member: any) => {
     if (member?.user_id) {
@@ -341,7 +368,12 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
           <h1 className="text-lg font-medium">{band.name}</h1>
         </div>
         <div className="ml-auto">
-          <Info className="h-5 w-5 text-gray-500" />
+          <button 
+            onClick={() => handleLeaveBand()}
+            className="text-sm text-red-500 hover:text-red-700 font-medium px-3 py-1 rounded-md border border-red-500 hover:bg-red-50 transition-colors"
+          >
+            Leave Band
+          </button>
         </div>
       </header>
 
