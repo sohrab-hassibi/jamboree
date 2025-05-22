@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { Check, X, LogOut, Calendar, Clock, MapPin } from "lucide-react";
+import { Check, X, LogOut } from "lucide-react";
 import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
 
 // Define the music icon types
@@ -24,32 +24,26 @@ type MusicIcon = {
 function UpcomingEvents() {
   const { upcomingEvents, isLoading, error } = useUserEvents();
   const router = useRouter();
-  
+
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
-    
-    // Format the date in a compact way for the cards
     return start.toLocaleDateString([], {
       weekday: 'short',
       month: 'numeric',
       day: 'numeric'
     });
   };
-  
+
   const handleEventClick = (eventId: string) => {
-    // Use the parent component's state management for navigation
-    // This will be passed from the parent ProfileScreen component
     if (typeof window !== 'undefined') {
-      // Access the global state management through the window object
       const event = new CustomEvent('openEvent', { detail: { eventId } });
       window.dispatchEvent(event);
     }
   };
-  
+
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Upcoming Events</h3>
-      
+      <h3 className="text-lg md:text-xl font-bold">Upcoming Events 🎶</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
@@ -74,7 +68,6 @@ function UpcomingEvents() {
                   className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleEventClick(event.id)}
                 >
-                  {/* Event image with participation indicator */}
                   <div className="relative">
                     <Image
                       src={event.image_url || '/placeholder.svg?height=100&width=200'}
@@ -83,7 +76,6 @@ function UpcomingEvents() {
                       height={100}
                       className="w-full h-24 object-cover"
                     />
-                    {/* Participation status indicator */}
                     <div 
                       className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
                         event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
@@ -108,31 +100,26 @@ function UpcomingEvents() {
 function PostGamesEvents() {
   const { pastEvents, isLoading, error } = useUserEvents();
   const router = useRouter();
-  
+
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
-    
     return start.toLocaleDateString([], {
       weekday: 'short',
       month: 'numeric',
       day: 'numeric'
     });
   };
-  
+
   const handleEventClick = (eventId: string) => {
-    // Use the parent component's state management for navigation
-    // This will be passed from the parent ProfileScreen component
     if (typeof window !== 'undefined') {
-      // Access the global state management through the window object
       const event = new CustomEvent('openEvent', { detail: { eventId } });
       window.dispatchEvent(event);
     }
   };
-  
+
   return (
-    <div>
-      <h3 className="font-medium mb-3">Post Games 👀</h3>
-      
+    <div className="space-y-3 mt-6">
+      <h3 className="text-lg md:text-xl font-bold">Post Games 👀</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
@@ -157,7 +144,6 @@ function PostGamesEvents() {
                   className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
                   onClick={() => handleEventClick(event.id)}
                 >
-                  {/* Event image with participation indicator */}
                   <div className="relative">
                     <Image
                       src={event.image_url || '/placeholder.svg?height=100&width=200'}
@@ -166,7 +152,6 @@ function PostGamesEvents() {
                       height={100}
                       className="w-full h-24 object-cover"
                     />
-                    {/* Participation status indicator */}
                     <div 
                       className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
                         event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
@@ -192,9 +177,7 @@ export default function ProfileScreen() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
-  const [iconSelectorType, setIconSelectorType] = useState<
-    "instrument" | "genre"
-  >("instrument");
+  const [iconSelectorType, setIconSelectorType] = useState<"instrument" | "genre">("instrument");
 
   // Music icons data
   const musicIcons: MusicIcon[] = [
@@ -473,8 +456,9 @@ export default function ProfileScreen() {
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex flex-col items-center">
-              <div className="relative inline-block">
-                <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
+              <div className="relative w-72 h-72 mb-2">
+                {/* Avatar centered */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32 flex justify-center items-center">
                   <Image
                     src="/placeholder.svg?height=128&width=128"
                     alt="Profile"
@@ -483,31 +467,48 @@ export default function ProfileScreen() {
                     className="object-cover"
                   />
                 </div>
-                <button className="absolute bottom-0 right-0 bg-[#ffac6d] rounded-full p-2">
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M14.5 2.5a2.121 2.121 0 0 1 3 3L12 11l-4 1 1-4 5.5-5.5z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </button>
+                {/* Icons absolutely positioned in this larger container */}
+                {profile.selectedIcons
+                  .concat(
+                    profile.instruments.filter((id) => !profile.selectedIcons.includes(id)),
+                    profile.genres.filter((id) => !profile.selectedIcons.includes(id))
+                  )
+                  .map((iconId, index, arr) => {
+                    const icon = musicIcons.find((i) => i.id === iconId);
+                    if (!icon) return null;
+                    const total = arr.length;
+
+                    // Icon diameter in px (w-12 = 48px)
+                    const iconDiameter = 48;
+                    // Choose a base radius that keeps icons outside the avatar and inside the container
+                    const baseRadius = 110;
+
+                    // Evenly distribute around the circle
+                    const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+
+                    // Center of the container (w-72/h-72 = 288px, so center is 144)
+                    const x = 144 + baseRadius * Math.cos(angle);
+                    const y = 144 + baseRadius * Math.sin(angle);
+
+                    return (
+                      <div
+                        key={icon.id}
+                        className="absolute bg-[#ffac6d] rounded-full w-12 h-12 flex items-center justify-center shadow-sm"
+                        style={{
+                          left: `${x}px`,
+                          top: `${y}px`,
+                          fontSize: "24px",
+                          transform: "translate(-50%, -50%)",
+                          zIndex: 10,
+                        }}
+                      >
+                        {icon.emoji}
+                      </div>
+                    );
+                  })}
               </div>
+
+              <h2 className="text-xl font-bold mt-4">{profile.name}</h2>
             </div>
 
             <div className="space-y-4">
@@ -633,16 +634,6 @@ export default function ProfileScreen() {
     );
   }
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      router.push('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
-
   // Profile View Mode
   return (
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
@@ -667,7 +658,15 @@ export default function ProfileScreen() {
             </Button>
             <Button
               variant="outline"
-              onClick={handleLogout}
+              onClick={async () => {
+                try {
+                  const { error } = await supabase.auth.signOut();
+                  if (error) throw error;
+                  router.push('/login');
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                }
+              }}
               className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
             >
               <LogOut className="h-4 w-4 mr-2" />
@@ -679,10 +678,12 @@ export default function ProfileScreen() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* Left column: Avatar, icons, name */}
+            <div className="flex flex-col items-center w-full md:w-auto md:min-w-[320px]">
+              <div className="relative w-72 h-72 mb-2">
+                {/* Avatar centered */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32 flex justify-center items-center">
                   <Image
                     src="/placeholder.svg?height=128&width=128"
                     alt="Profile"
@@ -691,52 +692,42 @@ export default function ProfileScreen() {
                     className="object-cover"
                   />
                 </div>
-
-                {/* Music icons around profile picture */}
-                {profile.selectedIcons.map((iconId, index) => {
-                  const icon = musicIcons.find((i) => i.id === iconId);
-                  if (!icon) return null;
-
-                  // Calculate position in a circle above the profile picture
-                  const totalIcons = profile.selectedIcons.length;
-                  const angle = (index / totalIcons) * Math.PI - Math.PI / 2; // Start from top (-π/2) and go 180 degrees (π)
-
-                  // Profile picture is 32px wide (radius 16px)
-                  // But we need to account for the orange border (border-4 = 4px)
-                  const profileRadius = 16;
-                  const borderWidth = 4;
-                  const totalProfileRadius = profileRadius + borderWidth;
-
-                  // Ensure icons are outside the orange border
-                  // Use the total radius (including border) as the base
-                  const iconPlacementRadius = totalProfileRadius * 1.25;
-
-                  // Calculate x and y coordinates
-                  const x = Math.cos(angle) * iconPlacementRadius;
-                  const y = Math.sin(angle) * iconPlacementRadius;
-
-                  return (
-                    <div
-                      key={icon.id}
-                      className="absolute bg-[#ffac6d] rounded-full w-10 h-10 flex items-center justify-center shadow-sm"
-                      style={{
-                        left: "50%",
-                        top: "50%",
-                        transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))`,
-                        fontSize: "20px",
-                        zIndex: 10,
-                      }}
-                    >
-                      {icon.emoji}
-                    </div>
-                  );
-                })}
+                {/* Icons absolutely positioned in this larger container */}
+                {profile.selectedIcons
+                  .concat(
+                    profile.instruments.filter((id) => !profile.selectedIcons.includes(id)),
+                    profile.genres.filter((id) => !profile.selectedIcons.includes(id))
+                  )
+                  .map((iconId, index, arr) => {
+                    const icon = musicIcons.find((i) => i.id === iconId);
+                    if (!icon) return null;
+                    const total = arr.length;
+                    const baseRadius = 110;
+                    const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+                    const x = 144 + baseRadius * Math.cos(angle);
+                    const y = 144 + baseRadius * Math.sin(angle);
+                    return (
+                      <div
+                        key={icon.id}
+                        className="absolute bg-[#ffac6d] rounded-full w-12 h-12 flex items-center justify-center shadow-sm"
+                        style={{
+                          left: `${x}px`,
+                          top: `${y}px`,
+                          fontSize: "24px",
+                          transform: "translate(-50%, -50%)",
+                          zIndex: 10,
+                        }}
+                      >
+                        {icon.emoji}
+                      </div>
+                    );
+                  })}
               </div>
-
               <h2 className="text-xl font-bold mt-4">{profile.name}</h2>
             </div>
 
-            <div className="flex-1 w-full">
+            {/* Right column: Bio, Instruments, Genres */}
+            <div className="flex-1 w-full mt-8 md:mt-0">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Bio:</label>
@@ -744,59 +735,54 @@ export default function ProfileScreen() {
                     {profile.bio}
                   </p>
                 </div>
-
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {profile.selectedIcons
-                      .map((id) => musicIcons.find((icon) => icon.id === id))
-                      .filter((icon) => icon && icon.type === "instrument")
-                      .map(
-                        (icon) =>
-                          icon && (
-                            <div
-                              key={icon.id}
-                              className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
-                            >
-                              <span className="mr-2">{icon.emoji}</span>
-                              <span className="text-sm">{icon.name}</span>
-                            </div>
-                          )
-                      )}
+                    {profile.instruments.map((instrument) => {
+                      const icon = musicIcons.find((i) => i.id === instrument);
+                      return (
+                        <div
+                          key={instrument}
+                          className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
+                        >
+                          <span className="mr-2">{icon?.emoji || "🎸"}</span>
+                          <span className="text-sm">{icon?.name || instrument}</span>
+                        </div>
+                      );
+                    })}
+                    {!profile.instruments.length && (
+                      <span className="text-sm text-gray-500 italic">No instruments selected</span>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {profile.selectedIcons
-                      .map((id) => musicIcons.find((icon) => icon.id === id))
-                      .filter((icon) => icon && icon.type === "genre")
-                      .map(
-                        (icon) =>
-                          icon && (
-                            <div
-                              key={icon.id}
-                              className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
-                            >
-                              <span className="mr-2">{icon.emoji}</span>
-                              <span className="text-sm">{icon.name}</span>
-                            </div>
-                          )
-                      )}
+                    {profile.genres.map((genre) => {
+                      const icon = musicIcons.find((i) => i.id === genre);
+                      return (
+                        <div
+                          key={genre}
+                          className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
+                        >
+                          <span className="mr-2">{icon?.emoji || "🎵"}</span>
+                          <span className="text-sm">{icon?.name || genre}</span>
+                        </div>
+                      );
+                    })}
+                    {!profile.genres.length && (
+                      <span className="text-sm text-gray-500 italic">No genres selected</span>
+                    )}
                   </div>
-                </div>
-
-                {/* Upcoming Events Section */}
-                <UpcomingEvents />
-
-                <div className="space-y-6">
-                  {/* Past Events */}
-                  <PostGamesEvents />
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Upcoming Events and Post Games sections, left-aligned, but "no events" centered */}
+          <UpcomingEvents />
+          <PostGamesEvents />
         </div>
       </div>
 
@@ -820,7 +806,15 @@ export default function ProfileScreen() {
           <Button
             variant="outline"
             className="w-full text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-            onClick={handleLogout}
+            onClick={async () => {
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                router.push('/login');
+              } catch (error) {
+                console.error('Error signing out:', error);
+              }
+            }}
           >
             <LogOut className="h-4 w-4 mr-2" />
             Logout

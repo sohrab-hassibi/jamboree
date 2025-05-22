@@ -145,7 +145,7 @@ function UpcomingEvents({ userId }: { userId: string }) {
   
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Upcoming Events</h3>
+      <h3 className="text-xl md:text-xl font-bold">Upcoming Events 🎶</h3>
       
       {isLoading ? (
         <div className="text-center py-4">
@@ -315,7 +315,7 @@ function PostGamesEvents({ userId }: { userId: string }) {
   
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Post Games 👀</h3>
+      <h3 className="text-lg md:text-xl font-bold">Post Games 👀</h3>
       
       {isLoading ? (
         <div className="text-center py-4">
@@ -499,6 +499,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
   }
 
   return (
+    // background + back button
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
       <div className="p-4 md:p-6 border-b flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">Profile</h1>
@@ -510,13 +511,16 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
           Back
         </Button>
       </div>
-
+      {/* photo, icons, name, bio, instrument, genres*/}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-6">
+          {/* formatting for flex containers */}
           <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
+            <div className="flex flex-col items-center">
+              {/* Ring container */}
+              <div className="relative w-72 h-72 mb-2">
+                {/* Avatar in the center */}
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32 flex justify-center items-center">
                   <Image
                     src={profileData?.avatar_url || "/placeholder.svg?height=128&width=128"}
                     alt={profileData?.full_name || "Profile"}
@@ -525,39 +529,24 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                     className="object-cover"
                   />
                 </div>
-
-                {/* Music icons around profile picture */}
-                {profileData?.instruments?.concat(profileData?.genres || []).map((iconId, index) => {
+                {/* Icons in a perfect ring OUTSIDE the avatar */}
+                {profileData?.instruments?.concat(profileData?.genres || []).map((iconId, index, arr) => {
                   const icon = musicIcons.find((i) => i.id === iconId);
                   if (!icon) return null;
-
-                  // Calculate position in a circle above the profile picture
-                  const totalIcons = (profileData?.instruments?.length || 0) + (profileData?.genres?.length || 0);
-                  const angle = (index / totalIcons) * Math.PI - Math.PI / 2; // Start from top (-π/2) and go 180 degrees (π)
-
-                  // Profile picture is 32px wide (radius 16px)
-                  // But we need to account for the orange border (border-4 = 4px)
-                  const profileRadius = 16;
-                  const borderWidth = 4;
-                  const totalProfileRadius = profileRadius + borderWidth;
-
-                  // Ensure icons are outside the orange border
-                  // Use the total radius (including border) as the base
-                  const iconPlacementRadius = totalProfileRadius * 1.25;
-
-                  // Calculate x and y coordinates
-                  const x = Math.cos(angle) * iconPlacementRadius;
-                  const y = Math.sin(angle) * iconPlacementRadius;
-
+                  const total = arr.length;
+                  // Match profile-screen.tsx: baseRadius = 110, center = 144
+                  const baseRadius = 110;
+                  const x = 144 + baseRadius * Math.cos((index / total) * 2 * Math.PI - Math.PI / 2);
+                  const y = 144 + baseRadius * Math.sin((index / total) * 2 * Math.PI - Math.PI / 2);
                   return (
                     <div
                       key={icon.id}
-                      className="absolute bg-[#ffac6d] rounded-full w-10 h-10 flex items-center justify-center shadow-sm"
+                      className="absolute bg-[#ffac6d] rounded-full w-12 h-12 flex items-center justify-center shadow-sm"
                       style={{
-                        left: "50%",
-                        top: "50%",
-                        transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))`,
-                        fontSize: "20px",
+                        left: `${x}px`,
+                        top: `${y}px`,
+                        fontSize: "24px",
+                        transform: "translate(-50%, -50%)",
                         zIndex: 10,
                       }}
                     >
@@ -566,21 +555,21 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                   );
                 })}
               </div>
-
-              <h2 className="text-xl font-bold mt-4">{profileData?.full_name}</h2>
+              {/* Name */}
+              <h2 className="text-xl font-bold mt-2">{profileData?.full_name}</h2>
             </div>
 
             <div className="flex-1 w-full">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Bio:</label>
+                  <label className="block text-base font-medium mb-1">Bio:</label>
                   <p className="text-sm bg-gray-50 p-3 rounded-lg">
                     {profileData?.bio || "No bio available"}
                   </p>
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Instruments:</h3>
+                  <h3 className="text-base font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.instruments?.map((instrument) => {
                       const icon = musicIcons.find((i) => i.id === instrument);
@@ -601,7 +590,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Genres:</h3>
+                  <h3 className="text-base font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.genres?.map((genre) => {
                       const icon = musicIcons.find((i) => i.id === genre);
