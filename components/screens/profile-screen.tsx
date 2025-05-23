@@ -43,7 +43,7 @@ function UpcomingEvents() {
 
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="text-lg md:text-xl font-bold">Upcoming Events 🎶</h3>
+      <h3 className="text-xl md:text-2xl font-bold">Upcoming Events 🎶</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
@@ -51,11 +51,11 @@ function UpcomingEvents() {
         </div>
       ) : error ? (
         <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
+          <p className="text-sm text-red-500">Error loading events</p>
         </div>
       ) : upcomingEvents.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No upcoming events</p>
+          <p className="text-lg text-gray-500">No upcoming events... Check out the Events Page!</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -65,7 +65,7 @@ function UpcomingEvents() {
               return (
                 <div
                   key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow"
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[320px] cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleEventClick(event.id)}
                 >
                   <div className="relative">
@@ -74,7 +74,7 @@ function UpcomingEvents() {
                       alt={event.title}
                       width={200}
                       height={100}
-                      className="w-full h-24 object-cover"
+                      className="w-full h-32 object-cover" // NEED TO UPDATE FOR MAIN SCREEN TOO
                     />
                     <div 
                       className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
@@ -83,8 +83,8 @@ function UpcomingEvents() {
                     />
                   </div>
                   <div className="p-2">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
+                    <div className="font-bold text-lg">{event.title}</div>
+                    <div className="text-base text-gray-500">{dateStr}</div>
                   </div>
                 </div>
               );
@@ -119,19 +119,19 @@ function PostGamesEvents() {
 
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="text-lg md:text-xl font-bold">Post Games 👀</h3>
+      <h3 className="text-xl md:text-2xl font-bold">Post Games 👀</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
         </div>
       ) : error ? (
         <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
+          <p className="text-sm text-red-500">Error loading events</p>
         </div>
       ) : pastEvents.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No past events</p>
+          <p className="text-lg text-gray-500">No past events... Events that you have attended will show up here!</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -178,6 +178,7 @@ export default function ProfileScreen() {
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
   const [iconSelectorType, setIconSelectorType] = useState<"instrument" | "genre">("instrument");
+  const [iconLimitWarning, setIconLimitWarning] = useState(false);
 
   // Music icons data
   const musicIcons: MusicIcon[] = [
@@ -338,12 +339,24 @@ export default function ProfileScreen() {
     setShowIconSelector(false);
   };
 
+  const MAX_ICONS = 10;
+
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      const newSelectedIcons = prev.selectedIcons.includes(iconId)
-        ? prev.selectedIcons.filter((id) => id !== iconId)
-        : [...prev.selectedIcons, iconId];
+      const isSelected = prev.selectedIcons.includes(iconId);
+      let newSelectedIcons;
+      if (isSelected) {
+        setIconLimitWarning(false); // Reset warning if deselecting
+        newSelectedIcons = prev.selectedIcons.filter((id) => id !== iconId);
+      } else {
+        if (prev.selectedIcons.length >= MAX_ICONS) {
+          setIconLimitWarning(true); // Show warning if trying to exceed
+          return prev;
+        }
+        setIconLimitWarning(false); // Reset warning if under limit
+        newSelectedIcons = [...prev.selectedIcons, iconId];
+      }
 
       // Update instruments and genres based on selected icons
       const instruments = newSelectedIcons
@@ -374,7 +387,7 @@ export default function ProfileScreen() {
   if (showIconSelector) {
     // Icon Selector View
     return (
-      <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm lg:my-6 flex flex-col">
+      <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm flex flex-col">
         <div className="p-4 md:p-6 border-b flex items-center justify-between">
           <div className="flex items-center">
             <button className="mr-3" onClick={() => setShowIconSelector(false)}>
@@ -413,7 +426,17 @@ export default function ProfileScreen() {
                     className={`flex flex-col items-center justify-center p-4 rounded-lg relative ${
                       isSelected ? "bg-[#ffd2b0]" : "bg-gray-100"
                     }`}
-                    onClick={() => toggleIconSelection(icon.id)}
+                    onClick={() => {
+                      if (!isSelected && formData.selectedIcons.length >= MAX_ICONS) {
+                        setIconLimitWarning(true);
+                        return;
+                      }
+                      toggleIconSelection(icon.id);
+                    }}
+                    style={{
+                      opacity: !isSelected && formData.selectedIcons.length >= MAX_ICONS ? 0.5 : 1,
+                      cursor: !isSelected && formData.selectedIcons.length >= MAX_ICONS ? "not-allowed" : "pointer",
+                    }}
                   >
                     <div className="text-3xl mb-2">{icon.emoji}</div>
                     <div className="text-sm">{icon.name}</div>
@@ -426,6 +449,11 @@ export default function ProfileScreen() {
                 );
               })}
           </div>
+          {iconLimitWarning && (
+            <div className="text-xs text-red-500 mt-4 text-center">
+              You can select up to 10 icons only.
+            </div>
+          )}
         </div>
 
         <div className="p-4 md:p-6 border-t">
@@ -443,7 +471,7 @@ export default function ProfileScreen() {
   } else if (editProfileMode) {
     // Edit Profile Mode
     return (
-      <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm lg:my-6 flex flex-col">
+      <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm flex flex-col">
         <div className="p-4 md:p-6 border-b flex items-center justify-between">
           <div className="flex items-center">
             <button className="mr-3" onClick={handleCancelEdit}>
@@ -456,14 +484,14 @@ export default function ProfileScreen() {
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="flex flex-col items-center">
-              <div className="relative w-72 h-72 mb-2">
+              <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32 flex justify-center items-center">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center">
                   <Image
-                    src="/placeholder.svg?height=128&width=128"
+                    src="/placeholder.svg?height=160&width=160"
                     alt="Profile"
-                    width={128}
-                    height={128}
+                    width={160}
+                    height={160}
                     className="object-cover"
                   />
                 </div>
@@ -477,27 +505,20 @@ export default function ProfileScreen() {
                     const icon = musicIcons.find((i) => i.id === iconId);
                     if (!icon) return null;
                     const total = arr.length;
-
-                    // Icon diameter in px (w-12 = 48px)
-                    const iconDiameter = 48;
-                    // Choose a base radius that keeps icons outside the avatar and inside the container
-                    const baseRadius = 110;
-
-                    // Evenly distribute around the circle
+                    const baseRadius = 120;
+                    const center = 160;
                     const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-
-                    // Center of the container (w-72/h-72 = 288px, so center is 144)
-                    const x = 144 + baseRadius * Math.cos(angle);
-                    const y = 144 + baseRadius * Math.sin(angle);
+                    const x = center + baseRadius * Math.cos(angle);
+                    const y = center + baseRadius * Math.sin(angle);
 
                     return (
                       <div
                         key={icon.id}
-                        className="absolute bg-[#ffac6d] rounded-full w-12 h-12 flex items-center justify-center shadow-sm"
+                        className="absolute bg-[#ffac6d] rounded-full w-16 h-16 flex items-center justify-center shadow-sm"
                         style={{
                           left: `${x}px`,
                           top: `${y}px`,
-                          fontSize: "24px",
+                          fontSize: "32px",
                           transform: "translate(-50%, -50%)",
                           zIndex: 10,
                         }}
@@ -508,14 +529,14 @@ export default function ProfileScreen() {
                   })}
               </div>
 
-              <h2 className="text-xl font-bold mt-4">{profile.name}</h2>
+              <h2 className="text-3xl font-bold mt-4">{profile.name}</h2>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label
                   htmlFor="name"
-                  className="block text-sm font-medium mb-2"
+                  className="block text-base font-medium mb-2"
                 >
                   Name
                 </label>
@@ -528,7 +549,7 @@ export default function ProfileScreen() {
               </div>
 
               <div>
-                <label htmlFor="bio" className="block text-sm font-medium mb-2">
+                <label htmlFor="bio" className="block text-base font-medium mb-2">
                   Bio
                 </label>
                 <Textarea
@@ -542,7 +563,7 @@ export default function ProfileScreen() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="block text-sm font-medium">
+                  <label className="block text-base font-medium">
                     Your Instruments
                   </label>
                   <Button
@@ -575,7 +596,7 @@ export default function ProfileScreen() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <label className="block text-sm font-medium">
+                  <label className="block text-base font-medium">
                     Your Genres
                   </label>
                   <Button
@@ -679,16 +700,16 @@ export default function ProfileScreen() {
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-6">
           <div className="flex flex-col md:flex-row gap-6 items-start">
-            {/* Left column: Avatar, icons, name */}
+            {/* Left column: Avatar & icons */}
             <div className="flex flex-col items-center w-full md:w-auto md:min-w-[320px]">
-              <div className="relative w-72 h-72 mb-2">
+              <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32 flex justify-center items-center">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center">
                   <Image
-                    src="/placeholder.svg?height=128&width=128"
+                    src="/placeholder.svg?height=160&width=160"
                     alt="Profile"
-                    width={128}
-                    height={128}
+                    width={160}
+                    height={160}
                     className="object-cover"
                   />
                 </div>
@@ -702,18 +723,20 @@ export default function ProfileScreen() {
                     const icon = musicIcons.find((i) => i.id === iconId);
                     if (!icon) return null;
                     const total = arr.length;
-                    const baseRadius = 110;
+                    const baseRadius = 120;
+                    const center = 160;
                     const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
-                    const x = 144 + baseRadius * Math.cos(angle);
-                    const y = 144 + baseRadius * Math.sin(angle);
+                    const x = center + baseRadius * Math.cos(angle);
+                    const y = center + baseRadius * Math.sin(angle);
+
                     return (
                       <div
                         key={icon.id}
-                        className="absolute bg-[#ffac6d] rounded-full w-12 h-12 flex items-center justify-center shadow-sm"
+                        className="absolute bg-[#ffac6d] rounded-full w-16 h-16 flex items-center justify-center shadow-sm"
                         style={{
                           left: `${x}px`,
                           top: `${y}px`,
-                          fontSize: "24px",
+                          fontSize: "32px",
                           transform: "translate(-50%, -50%)",
                           zIndex: 10,
                         }}
@@ -723,20 +746,22 @@ export default function ProfileScreen() {
                     );
                   })}
               </div>
-              <h2 className="text-xl font-bold mt-4">{profile.name}</h2>
             </div>
 
-            {/* Right column: Bio, Instruments, Genres */}
+            {/* Right column: Name, Bio, Instruments, Genres */}
             <div className="flex-1 w-full mt-8 md:mt-0">
               <div className="space-y-4">
+                {/* ADD the name here */}
+                <h2 className="text-3xl font-bold">{profile.name}</h2>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Bio:</label>
-                  <p className="text-sm bg-gray-50 p-3 rounded-lg">
+                  <label className="block text-lg font-medium mb-1">Bio:</label>
+                  <p className="text-base bg-gray-50 p-3 rounded-lg">
                     {profile.bio}
                   </p>
                 </div>
+
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Instruments:</h3>
+                  <h3 className="text-lg font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.instruments.map((instrument) => {
                       const icon = musicIcons.find((i) => i.id === instrument);
@@ -757,7 +782,7 @@ export default function ProfileScreen() {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Genres:</h3>
+                  <h3 className="text-lg font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.genres.map((genre) => {
                       const icon = musicIcons.find((i) => i.id === genre);
