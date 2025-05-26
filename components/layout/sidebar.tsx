@@ -23,7 +23,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEvent }: SidebarProps) {
-  const [profile, setProfile] = useState<ProfileData>({ name: '' })
+  const [profile, setProfile] = useState<ProfileData & { avatar_url?: string }>({ name: '' })
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -43,7 +43,8 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
           name: userName || data?.full_name || 'User',
           bio: data?.bio,
           instruments: data?.instruments || [],
-          genres: data?.genres || []
+          genres: data?.genres || [],
+          avatar_url: data?.avatar_url
         })
       }
     }
@@ -114,8 +115,8 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
-            <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Profile" />
-            <AvatarFallback>T</AvatarFallback>
+            <AvatarImage src={profile.avatar_url || "/placeholder.svg?height=40&width=40"} alt="Profile" />
+            <AvatarFallback>{profile.name ? profile.name.charAt(0) : 'U'}</AvatarFallback>
           </Avatar>
           <div>
             <div className="font-medium text-lg">{profile.name}</div>

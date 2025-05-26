@@ -53,7 +53,7 @@ export function ParticipantCard({
       <div className="flex items-center gap-2 min-w-0">
         <Avatar className="w-6 h-6 flex-shrink-0">
           <Image
-            src={participant.avatar_url}
+            src={participant.avatar_url || '/placeholder.svg'}
             alt={participant.full_name || 'User'}
             width={24}
             height={24}

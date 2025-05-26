@@ -58,7 +58,7 @@ export function useEventChat(eventId: string) {
       
       if (userIds.length > 0) {
         const { data: userData, error: userError } = await supabase
-          .from('users')  // Fetch user data from the users table instead of profiles
+          .from('profiles')  // Fetch user data from the profiles table
           .select('id, full_name, avatar_url')
           .in('id', userIds);
           
@@ -83,7 +83,7 @@ export function useEventChat(eventId: string) {
           });
           
           // Attach user data to messages
-          messages.forEach(message => {
+          messages.forEach((message: any) => {
             message.user = userMap[message.user_id] || undefined;
           });
         }
@@ -138,7 +138,7 @@ export function useEventChat(eventId: string) {
         user: {
           id: user.id,
           full_name: user.user_metadata?.full_name || 'You',
-          avatar_url: user.user_metadata?.avatar_url || '/placeholder.svg'
+          avatar_url: user.avatar_url || user.user_metadata?.avatar_url || '/placeholder.svg'
         }
       };
       
@@ -209,9 +209,9 @@ export function useEventChat(eventId: string) {
           console.log('Received new message via real-time:', payload);
           
           try {
-            // When we receive a new message, fetch the user data from users table
+            // When we receive a new message, fetch the user data from profiles table
             const { data: userData, error: userError } = await supabase
-              .from('users')
+              .from('profiles')
               .select('id, full_name, avatar_url')
               .eq('id', payload.new.user_id)
               .single();

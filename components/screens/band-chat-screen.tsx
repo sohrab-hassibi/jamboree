@@ -26,6 +26,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
   const router = useRouter()
   const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [messageText, setMessageText] = useState("")
+  const [userProfile, setUserProfile] = useState<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   
@@ -68,6 +69,34 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
     setDirectMembers(data)
     setDirectLoading(false)
   }
+  
+  // Fetch the current user's profile
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          return;
+        }
+        
+        if (data) {
+          setUserProfile(data);
+        }
+      } catch (error) {
+        console.error('Error in profile fetch:', error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [user]);
   
   useEffect(() => {
     const fetchBandMembers = async () => {
@@ -142,10 +171,10 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
             return;
           }
           
-          // Fetch user details from the users table (same as in use-event.ts)
+          // Fetch user details from the profiles table
           const userPromises = userIds.map(async (userId) => {
             const { data, error } = await supabase
-              .from('users')
+              .from('profiles')
               .select('id, full_name, avatar_url')
               .eq('id', userId)
               .single();
@@ -410,7 +439,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
                     ) : (
                       <Avatar className="w-8 h-8 order-1">
                         <Image 
-                          src={user?.user_metadata?.avatar_url || '/placeholder.svg'} 
+                          src={userProfile?.avatar_url || user?.user_metadata?.avatar_url || '/placeholder.svg'} 
                           alt="You" 
                           width={32} 
                           height={32} 

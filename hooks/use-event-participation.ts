@@ -215,7 +215,7 @@ export function useEventParticipation(eventId: string): EventParticipation {
         // First, get the current user's profile
         console.log("Fetching user profile for:", userId);
         const { data: userProfile, error: profileError } = await supabase
-          .from("users")
+          .from("profiles")
           .select("id, full_name, avatar_url")
           .eq("id", userId)
           .single();

@@ -76,7 +76,7 @@ export function useBandMessages(bandId: string) {
       
       // Fetch user details for all users at once
       const { data: userData, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('id, full_name, avatar_url')
         .in('id', userIds);
       
@@ -228,9 +228,9 @@ export function useBandMessages(bandId: string) {
           console.log('Received new message via real-time:', payload);
           
           try {
-            // When we receive a new message, fetch the user data from users table
+            // When we receive a new message, fetch the user data from profiles table
             const { data: userData, error: userError } = await supabase
-              .from('users')
+              .from('profiles')
               .select('id, full_name, avatar_url')
               .eq('id', payload.new.user_id)
               .single();
