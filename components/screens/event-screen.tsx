@@ -264,21 +264,30 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
     
     return (
       <div className="p-4 md:p-8 space-y-6">
-        {/* Make the image container smaller */}
-        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100 max-h-64 md:max-h-80">
-          <Image
-            src={eventImage}
-            alt={event.title}
-            fill
-            className="object-cover w-full h-full"
-            priority
-            sizes="(max-width: 768px) 100vw, 800px"
-          />
+        {/* Only show image container if there's an image */}
+        {event.image_url && (
+          <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100 max-h-64 md:max-h-80">
+            <Image
+              src={event.image_url}
+              alt={event.title}
+              fill
+              className="object-cover w-full h-full"
+              priority
+              sizes="(max-width: 768px) 100vw, 800px"
+            />
+          </div>
+        )}
+
+        {/* MOVED: About section now comes first */}
+        <div className="mb-6">
+          <h2 className="font-medium text-xl mb-3">About</h2>
+          <p className="text-lg text-gray-700">{event.description}</p>
         </div>
 
+        {/* Location, time, and RSVP buttons */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div className="space-y-2">
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-base">
               <svg
                 width="16"
                 height="16"
@@ -306,7 +315,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
               </svg>
               <span className="text-gray-700">{event.location}</span>
             </div>
-            <div className="flex items-center text-sm">
+            <div className="flex items-center text-base">
               <svg
                 width="16"
                 height="16"
@@ -368,11 +377,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           </div>
         </div>
 
-        <div className="mb-8">
-          <h2 className="font-medium text-lg mb-3">About</h2>
-          <p className="text-base text-gray-700">{event.description}</p>
-        </div>
-
+        {/* Participants section remains at the bottom */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-medium text-lg">Participants</h2>

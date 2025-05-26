@@ -39,7 +39,7 @@ export default function SignupForm() {
           data: {
             full_name: formData.fullName,
           },
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: `${window.location.origin}/onboarding`,
         },
       });
 
@@ -48,9 +48,6 @@ export default function SignupForm() {
       // Show confirmation for email signup
       setEmail(formData.email);
       setShowConfirmation(true);
-      
-      // For phone signups, proceed with OTP verification
-      toast.success("Verification code sent to your phone!");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -68,7 +65,7 @@ export default function SignupForm() {
           Please check your inbox and click the link to verify your email address.
         </p>
         <p className="text-sm text-gray-600 mb-6">
-          Didn't receive the email? Check your spam folder or request a new link.
+          After verifying your email, you'll be taken through a quick setup process to customize your profile.
         </p>
         <div className="space-y-3">
           <Button

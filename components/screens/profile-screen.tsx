@@ -167,7 +167,7 @@ function PostGamesEvents() {
                   </span>
                   </div>
                   <div className="p-2">
-                    <div className="font-medium text-sm">{event.title}</div>
+                    <div className="font-bold text-lg">{event.title}</div>
                     <div className="text-base text-gray-500">{dateStr}</div>
                   </div>
                 </div>
@@ -187,6 +187,8 @@ export default function ProfileScreen() {
   const [showIconSelector, setShowIconSelector] = useState(false);
   const [iconSelectorType, setIconSelectorType] = useState<"instrument" | "genre">("instrument");
   const [iconLimitWarning, setIconLimitWarning] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
 
   // Music icons data
   const musicIcons: MusicIcon[] = [
@@ -339,6 +341,74 @@ export default function ProfileScreen() {
 
       if (error) throw error;
 
+      // Update participant data in all events where this user is a participant
+      const { data: events, error: eventsError } = await supabase
+        .from('events')
+        .select('id, participants_going, participants_maybe')
+        .or(`participants_going.cs.["${user.id}"], participants_maybe.cs.["${user.id}"]`);
+
+      if (!eventsError && events) {
+        for (const event of events) {
+          // Update going participants
+          const updatedGoing = (event.participants_going || []).map((p: any) => {
+            let participant;
+            if (typeof p === 'string') {
+              try {
+                participant = JSON.parse(p);
+              } catch {
+                participant = { id: p };
+              }
+            } else {
+              participant = p;
+            }
+            
+            if (participant.id === user.id) {
+              return JSON.stringify({
+                ...participant,
+                full_name: formData.name,
+                instruments,
+                genres,
+              });
+            }
+            return typeof p === 'string' ? p : JSON.stringify(p);
+          });
+
+          // Update maybe participants
+          const updatedMaybe = (event.participants_maybe || []).map((p: any) => {
+            let participant;
+            if (typeof p === 'string') {
+              try {
+                participant = JSON.parse(p);
+              } catch {
+                participant = { id: p };
+              }
+            } else {
+              participant = p;
+            }
+            
+            if (participant.id === user.id) {
+              return JSON.stringify({
+                ...participant,
+                full_name: formData.name,
+                instruments,
+                genres,
+              });
+            }
+            return typeof p === 'string' ? p : JSON.stringify(p);
+          });
+
+          // Update the event
+          await supabase
+            .from('events')
+            .update({
+              participants_going: updatedGoing,
+              participants_maybe: updatedMaybe,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', event.id);
+        }
+      }
+
       // Update local state
       const updatedProfile = {
         name: formData.name,
@@ -351,6 +421,13 @@ export default function ProfileScreen() {
       setProfile(updatedProfile);
       setEditProfileMode(false);
       setShowIconSelector(false);
+      
+      console.log('Profile saved successfully, dispatching event...');
+      
+      // Dispatch event to notify other components that profile was updated
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profileUpdated'));
+      }
     } catch (error) {
       console.error('Error saving profile:', error);
     }

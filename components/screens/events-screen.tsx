@@ -4,9 +4,10 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Button } from "@/components/ui/button"
-import { PlusCircle, Loader2 } from "lucide-react"
+import { PlusCircle, Loader2, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
+import { Input } from "@/components/ui/input"
 
 interface EventsScreenProps {
   onOpenEvent: (eventId: string) => void
@@ -16,6 +17,9 @@ interface EventsScreenProps {
 export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScreenProps) {
   const [activeTab, setActiveTab] = useState("upcoming")
   const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; date: string; start_time: string; image: string }>>([])
+  const [isSearching, setIsSearching] = useState(false)
 
   const [events, setEvents] = useState<{
     upcoming: Array<{ id: string; title: string; date: string; start_time: string; image: string }>;
@@ -156,128 +160,236 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
     };
   }, []);
 
+  // Search events function
+  const searchEvents = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .ilike('title', `%${query}%`)
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+
+      setSearchResults(
+        (data || []).map(event => ({
+          ...event,
+          date: formatEventDate(event.start_time),
+          image: event.image_url || "/placeholder.svg"
+        }))
+      );
+    } catch (err) {
+      console.error('Error searching events:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounce search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchEvents(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
   return (
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen lg:overflow-hidden">
-      <header className="p-4 md:p-6 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-        <h1 className="text-xl md:text-2xl font-bold flex items-center">
-          Events <span className="ml-1">🎵</span>
-        </h1>
-        <Button className="bg-[#ffac6d] hover:bg-[#fdc193] text-black" onClick={onCreateEvent}>
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Create Event
-        </Button>
+      <header className="p-4 md:p-6 border-b flex flex-col gap-4 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl md:text-2xl font-bold flex items-center">
+            Events <span className="ml-1">🎵</span>
+          </h1>
+          <Button className="bg-[#ffac6d] hover:bg-[#fdc193] text-black" onClick={onCreateEvent}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Create Event
+          </Button>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
       </header>
 
       <div className="p-4 md:p-6 space-y-10 lg:overflow-y-auto lg:h-[calc(100vh-80px)]">
-        {/* Past Events Section */}
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold mb-2">Post Games 👀</h2>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
-          ) : events.past.length === 0 ? (
-            <p className="text-lg text-gray-500">No past events yet</p>
-          ) : (
-            <div className="relative">
-              <div className="overflow-x-auto pb-4 hide-scrollbar">
-                <div className="flex space-x-6">
-                  {events.past.map((event) => (
-                    <div
-                      key={event.id}
-                      className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
-                      onClick={() => onOpenEvent(event.id)}
-                    >
-                      <div className="relative">
-                        <Image
-                          src={event.image || "/placeholder.svg"}
-                          alt={event.title}
-                          width={280}
-                          height={160}
-                          className="w-full h-48 object-cover"
-                        />
-                        {/* RSVP Status Badge for Past Events */}
-                        {userRsvps[event.id] && (
-                          <span
-                            className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                              userRsvps[event.id] === 'going'
-                                ? 'text-green-700 bg-green-100'
-                                : 'text-yellow-700 bg-yellow-100'
-                            }`}
-                          >
-                            {userRsvps[event.id] === 'going' ? '✅ Attended' : '🤔 Was Interested'}
-                          </span>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
-                          <div className="font-bold text-lg">{event.title}</div>
-                          <div className="text-base text-gray-500">{event.date}</div>
+        {/* Search Results */}
+        {searchQuery && (
+          <div>
+            <h2 className="text-xl md:text-2xl font-bold mb-2">Search Results</h2>
+            {isSearching ? (
+              <div className="flex justify-center items-center h-32">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : searchResults.length === 0 ? (
+              <p className="text-lg text-gray-500">No events found matching "{searchQuery}"</p>
+            ) : (
+              <div className="relative">
+                <div className="overflow-x-auto pb-4 hide-scrollbar">
+                  <div className="flex space-x-6">
+                    {searchResults.map((event) => (
+                      <div
+                        key={event.id}
+                        className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
+                        onClick={() => onOpenEvent(event.id)}
+                      >
+                        <div className="relative">
+                          <Image
+                            src={event.image || "/placeholder.svg"}
+                            alt={event.title}
+                            width={280}
+                            height={160}
+                            className="w-full h-48 object-cover"
+                          />
+                          {userRsvps[event.id] && (
+                            <span
+                              className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                                userRsvps[event.id] === 'going'
+                                  ? 'text-green-700 bg-green-100'
+                                  : 'text-yellow-700 bg-yellow-100'
+                              }`}
+                            >
+                              {userRsvps[event.id] === 'going' ? '✅ Going' : '🤔 Maybe'}
+                            </span>
+                          )}
+                          <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
+                            <div className="font-bold text-lg">{event.title}</div>
+                            <div className="text-base text-gray-500">{event.date}</div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
-        {/* Upcoming Events Section */}
-        <div>
-          <h2 className="text-xl md:text-2xl font-bold mb-2">Upcoming!</h2>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
-          ) : events.upcoming.length === 0 ? (
-            <p className="text-lg text-gray-500">No upcoming events. Create one to get started!</p>
-          ) : (
-            <div className="relative">
-              <div className="overflow-x-auto pb-4 hide-scrollbar">
-                <div className="flex space-x-6">
-                  {events.upcoming.map((event) => (
-                    <div
-                      key={event.id}
-                      className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
-                      onClick={() => onOpenEvent(event.id)}
-                    >
-                      <div className="relative">
-                        <Image
-                          src={event.image || "/placeholder.svg"}
-                          alt={event.title}
-                          width={280}
-                          height={160}
-                          className="w-full h-48 object-cover"
-                        />
-                        {/* RSVP Status Badge for Upcoming Events */}
-                        {userRsvps[event.id] && (
-                          <span
-                            className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                              userRsvps[event.id] === 'going'
-                                ? 'text-green-700 bg-green-100'
-                                : 'text-yellow-700 bg-yellow-100'
-                            }`}
-                          >
-                            {userRsvps[event.id] === 'going' ? '✅ Going' : '🤔 Maybe'}
-                          </span>
-                        )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
-                          <div className="font-bold text-lg">{event.title}</div>
-                          <div className="text-base text-gray-500">{event.date}</div>
+        {/* Show Past and Upcoming sections only when not searching */}
+        {!searchQuery && (
+          <>
+            {/* Past Events Section */}
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold mb-2">Post Games 👀</h2>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
+              ) : events.past.length === 0 ? (
+                <p className="text-lg text-gray-500">No past events yet</p>
+              ) : (
+                <div className="relative">
+                  <div className="overflow-x-auto pb-4 hide-scrollbar">
+                    <div className="flex space-x-6">
+                      {events.past.map((event) => (
+                        <div
+                          key={event.id}
+                          className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
+                          onClick={() => onOpenEvent(event.id)}
+                        >
+                          <div className="relative">
+                            <Image
+                              src={event.image || "/placeholder.svg"}
+                              alt={event.title}
+                              width={280}
+                              height={160}
+                              className="w-full h-48 object-cover"
+                            />
+                            {/* RSVP Status Badge for Past Events */}
+                            {userRsvps[event.id] && (
+                              <span
+                                className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                                  userRsvps[event.id] === 'going'
+                                    ? 'text-green-700 bg-green-100'
+                                    : 'text-yellow-700 bg-yellow-100'
+                                }`}
+                              >
+                                {userRsvps[event.id] === 'going' ? '✅ Attended' : '🤔 Was Interested'}
+                              </span>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
+                              <div className="font-bold text-lg">{event.title}</div>
+                              <div className="text-base text-gray-500">{event.date}</div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-          )}
-        </div>
 
-
+            {/* Upcoming Events Section */}
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold mb-2">Upcoming!</h2>
+              {isLoading ? (
+                <div className="flex justify-center items-center h-32">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : error ? (
+                <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
+              ) : events.upcoming.length === 0 ? (
+                <p className="text-lg text-gray-500">No upcoming events. Create one to get started!</p>
+              ) : (
+                <div className="relative">
+                  <div className="overflow-x-auto pb-4 hide-scrollbar">
+                    <div className="flex space-x-6">
+                      {events.upcoming.map((event) => (
+                        <div
+                          key={event.id}
+                          className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
+                          onClick={() => onOpenEvent(event.id)}
+                        >
+                          <div className="relative">
+                            <Image
+                              src={event.image || "/placeholder.svg"}
+                              alt={event.title}
+                              width={280}
+                              height={160}
+                              className="w-full h-48 object-cover"
+                            />
+                            {/* RSVP Status Badge for Upcoming Events */}
+                            {userRsvps[event.id] && (
+                              <span
+                                className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                                  userRsvps[event.id] === 'going'
+                                    ? 'text-green-700 bg-green-100'
+                                    : 'text-yellow-700 bg-yellow-100'
+                                }`}
+                              >
+                                {userRsvps[event.id] === 'going' ? '✅ Going' : '🤔 Maybe'}
+                              </span>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
+                              <div className="font-bold text-lg">{event.title}</div>
+                              <div className="text-base text-gray-500">{event.date}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="h-16 lg:hidden">{/* Spacer for mobile nav */}</div>
