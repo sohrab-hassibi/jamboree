@@ -47,7 +47,7 @@ function UpcomingEvents() {
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
         </div>
       ) : error ? (
         <div className="text-center py-4">
@@ -74,13 +74,17 @@ function UpcomingEvents() {
                       alt={event.title}
                       width={200}
                       height={100}
-                      className="w-full h-32 object-cover" // NEED TO UPDATE FOR MAIN SCREEN TOO
+                      className="w-full h-32 object-cover"
                     />
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                    <span
+                      className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                        event.participationStatus === 'going'
+                          ? 'text-green-700 bg-green-100'
+                          : 'text-yellow-700 bg-yellow-100'
                       }`}
-                    />
+                    >
+                      {event.participationStatus === 'going' ? 'Going ✅' : 'Maybe 🤔'}
+                    </span>
                   </div>
                   <div className="p-2">
                     <div className="font-bold text-lg">{event.title}</div>
@@ -141,7 +145,7 @@ function PostGamesEvents() {
               return (
                 <div
                   key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[320px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
                   onClick={() => handleEventClick(event.id)}
                 >
                   <div className="relative">
@@ -150,17 +154,21 @@ function PostGamesEvents() {
                       alt={event.title}
                       width={200}
                       height={100}
-                      className="w-full h-24 object-cover"
+                      className="w-full h-32 object-cover"
                     />
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                    <span
+                      className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                        event.participationStatus === 'going'
+                          ? 'text-green-700 bg-green-100'
+                          : 'text-yellow-700 bg-yellow-100'
                       }`}
-                    />
+                    >
+                      {event.participationStatus === 'going' ? 'Attended ✅' : 'Was Interested 🤔'}
+                  </span>
                   </div>
                   <div className="p-2">
                     <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
+                    <div className="text-base text-gray-500">{dateStr}</div>
                   </div>
                 </div>
               );
@@ -191,13 +199,14 @@ export default function ProfileScreen() {
     { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
     { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
     { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-    { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
+    { id: "pop", name: "Pop", emoji: "⭐", type: "genre" },
     { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
     { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-    { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
+    { id: "electronic", name: "Electronic", emoji: "🤖", type: "genre" },
     { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
     { id: "country", name: "Country", emoji: "🤠", type: "genre" },
     { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
+
   ];
 
   // Profile state
@@ -217,6 +226,7 @@ export default function ProfileScreen() {
     instruments: [] as string[],
     genres: [] as string[],
   });
+
 
   // Load user profile data
   useEffect(() => {
@@ -276,6 +286,26 @@ export default function ProfileScreen() {
       ...prev,
       [name]: value,
     }));
+  };
+
+  // Handler for profile image change
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.match("image.*")) {
+      alert("Please select an image file (JPEG, PNG, etc.)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size should be less than 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileImageFile(file);
+      setProfileImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Function to save profile changes
@@ -486,9 +516,9 @@ export default function ProfileScreen() {
             <div className="flex flex-col items-center">
               <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100">
                   <Image
-                    src="/placeholder.svg?height=160&width=160"
+                    src={"/placeholder.svg?height=160&width=160"}
                     alt="Profile"
                     width={160}
                     height={160}
@@ -496,10 +526,10 @@ export default function ProfileScreen() {
                   />
                 </div>
                 {/* Icons absolutely positioned in this larger container */}
-                {profile.selectedIcons
+                {formData.selectedIcons
                   .concat(
-                    profile.instruments.filter((id) => !profile.selectedIcons.includes(id)),
-                    profile.genres.filter((id) => !profile.selectedIcons.includes(id))
+                    formData.instruments.filter((id) => !formData.selectedIcons.includes(id)),
+                    formData.genres.filter((id) => !formData.selectedIcons.includes(id))
                   )
                   .map((iconId, index, arr) => {
                     const icon = musicIcons.find((i) => i.id === iconId);
@@ -704,14 +734,7 @@ export default function ProfileScreen() {
             <div className="flex flex-col items-center w-full md:w-auto md:min-w-[320px]">
               <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center">
-                  <Image
-                    src="/placeholder.svg?height=160&width=160"
-                    alt="Profile"
-                    width={160}
-                    height={160}
-                    className="object-cover"
-                  />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100">
                 </div>
                 {/* Icons absolutely positioned in this larger container */}
                 {profile.selectedIcons
@@ -732,7 +755,7 @@ export default function ProfileScreen() {
                     return (
                       <div
                         key={icon.id}
-                        className="absolute bg-[#ffac6d] rounded-full w-16 h-16 flex items-center justify-center shadow-sm"
+                        className="absolute bg-[#ffac6d] rounded-full w-14 h-14 flex items-center justify-center shadow-sm"
                         style={{
                           left: `${x}px`,
                           top: `${y}px`,
