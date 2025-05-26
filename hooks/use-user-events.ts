@@ -123,7 +123,62 @@ export function useUserEvents() {
 
   useEffect(() => {
     fetchUserEvents();
-  }, [fetchUserEvents]);
+    
+    // Set up real-time subscription for event participation changes
+    if (user) {
+      // Subscribe to all event updates
+      const eventsChannel = supabase
+        .channel('user_events_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'events',
+          },
+          (payload) => {
+            console.log('Event updated:', payload);
+            // Immediately refresh events when any event is updated
+            fetchUserEvents();
+          }
+        )
+        .subscribe();
+
+      // Create a separate channel specifically for the sidebar to ensure immediate updates
+      const sidebarChannel = supabase
+        .channel('sidebar_events_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'events',
+          },
+          () => {
+            // Force an immediate refresh with minimal delay
+            setTimeout(() => {
+              fetchUserEvents();
+            }, 100);
+          }
+        )
+        .subscribe();
+      
+      // Add a custom event listener for immediate updates when the user RSVPs to an event
+      const handleParticipationUpdate = () => {
+        console.log('Participation update event received');
+        // Immediately refresh the events list
+        fetchUserEvents();
+      };
+      
+      window.addEventListener('eventParticipationUpdated', handleParticipationUpdate);
+
+      return () => {
+        supabase.removeChannel(eventsChannel);
+        supabase.removeChannel(sidebarChannel);
+        window.removeEventListener('eventParticipationUpdated', handleParticipationUpdate);
+      };
+    }
+  }, [fetchUserEvents, user]);
 
   return {
     upcomingEvents,

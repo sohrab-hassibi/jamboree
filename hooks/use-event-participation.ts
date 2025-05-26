@@ -425,6 +425,12 @@ export function useEventParticipation(eventId: string): EventParticipation {
           maybe: updatedMaybe,
         });
         setParticipationStatus(status);
+        
+        // Dispatch a custom event to ensure immediate updates across components
+        const event = new CustomEvent('eventParticipationUpdated', { 
+          detail: { eventId, userId, status } 
+        });
+        window.dispatchEvent(event);
       } catch (error) {
         console.error("Error in updateParticipation:", error);
         console.error(
