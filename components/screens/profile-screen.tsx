@@ -43,7 +43,7 @@ function UpcomingEvents() {
 
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="text-xl md:text-2xl font-bold">Upcoming Events 🎶</h3>
+      <h3 className="text-xl md:text-2xl font-bold">Upcoming Events 🎵</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>

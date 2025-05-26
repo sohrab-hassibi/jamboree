@@ -23,6 +23,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
   }>({ upcoming: [], past: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userRsvps, setUserRsvps] = useState<{ [eventId: string]: string }>({});
 
   // Format date to a readable string
   const formatEventDate = (dateString: string) => {
@@ -33,6 +34,65 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
       return '';
     }
   };
+
+  // Fetch user RSVPs
+  useEffect(() => {
+    const fetchUserRsvps = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      try {
+        // Get all events where the user is a participant
+        const { data: events, error } = await supabase
+          .from('events')
+          .select('id, participants_going, participants_maybe');
+
+        if (error) throw error;
+
+        const rsvps: { [eventId: string]: string } = {};
+
+        events?.forEach(event => {
+          // Check if user is in going participants
+          const isGoing = event.participants_going?.some((p: any) => {
+            if (typeof p === 'string') {
+              try {
+                const parsed = JSON.parse(p);
+                return parsed.id === user.id;
+              } catch {
+                return p === user.id;
+              }
+            }
+            return p.id === user.id;
+          });
+
+          // Check if user is in maybe participants
+          const isMaybe = event.participants_maybe?.some((p: any) => {
+            if (typeof p === 'string') {
+              try {
+                const parsed = JSON.parse(p);
+                return parsed.id === user.id;
+              } catch {
+                return p === user.id;
+              }
+            }
+            return p.id === user.id;
+          });
+
+          if (isGoing) {
+            rsvps[event.id] = 'going';
+          } else if (isMaybe) {
+            rsvps[event.id] = 'maybe';
+          }
+        });
+
+        setUserRsvps(rsvps);
+      } catch (error) {
+        console.error('Error fetching user RSVPs:', error);
+      }
+    };
+
+    fetchUserRsvps();
+  }, []);
 
   // Fetch events from Supabase
   useEffect(() => {
@@ -111,7 +171,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
       <div className="p-4 md:p-6 space-y-10 lg:overflow-y-auto lg:h-[calc(100vh-80px)]">
         {/* Past Events Section */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Post Games 👀</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-2">Post Games 👀</h2>
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -119,7 +179,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
           ) : error ? (
             <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
           ) : events.past.length === 0 ? (
-            <p className="text-gray-500">No past events yet</p>
+            <p className="text-lg text-gray-500">No past events yet</p>
           ) : (
             <div className="relative">
               <div className="overflow-x-auto pb-4 hide-scrollbar">
@@ -127,7 +187,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
                   {events.past.map((event) => (
                     <div
                       key={event.id}
-                      className="rounded-lg overflow-hidden border shadow-sm opacity-70 cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
+                      className="rounded-lg overflow-hidden border shadow-sm cursor-pointer hover:shadow-md transition-shadow flex-shrink-0 w-[320px] bg-white"
                       onClick={() => onOpenEvent(event.id)}
                     >
                       <div className="relative">
@@ -138,9 +198,21 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
                           height={160}
                           className="w-full h-48 object-cover"
                         />
+                        {/* RSVP Status Badge for Past Events */}
+                        {userRsvps[event.id] && (
+                          <span
+                            className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                              userRsvps[event.id] === 'going'
+                                ? 'text-green-700 bg-green-100'
+                                : 'text-yellow-700 bg-yellow-100'
+                            }`}
+                          >
+                            {userRsvps[event.id] === 'going' ? '✅ Attended' : '🤔 Was Interested'}
+                          </span>
+                        )}
                         <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
                           <div className="font-bold text-lg">{event.title}</div>
-                          <div className="text-base">{event.date}</div>
+                          <div className="text-base text-gray-500">{event.date}</div>
                         </div>
                       </div>
                     </div>
@@ -153,7 +225,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
 
         {/* Upcoming Events Section */}
         <div>
-          <h2 className="text-xl font-bold mb-4">Upcoming!</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-2">Upcoming!</h2>
           {isLoading ? (
             <div className="flex justify-center items-center h-32">
               <Loader2 className="h-8 w-8 animate-spin" />
@@ -161,7 +233,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
           ) : error ? (
             <div className="text-red-500 p-4 bg-red-50 rounded">{error}</div>
           ) : events.upcoming.length === 0 ? (
-            <p className="text-gray-500">No upcoming events. Create one to get started!</p>
+            <p className="text-lg text-gray-500">No upcoming events. Create one to get started!</p>
           ) : (
             <div className="relative">
               <div className="overflow-x-auto pb-4 hide-scrollbar">
@@ -180,9 +252,21 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
                           height={160}
                           className="w-full h-48 object-cover"
                         />
+                        {/* RSVP Status Badge for Upcoming Events */}
+                        {userRsvps[event.id] && (
+                          <span
+                            className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                              userRsvps[event.id] === 'going'
+                                ? 'text-green-700 bg-green-100'
+                                : 'text-yellow-700 bg-yellow-100'
+                            }`}
+                          >
+                            {userRsvps[event.id] === 'going' ? '✅ Going' : '🤔 Maybe'}
+                          </span>
+                        )}
                         <div className="absolute bottom-0 left-0 right-0 bg-white bg-opacity-80 p-3">
                           <div className="font-bold text-lg">{event.title}</div>
-                          <div className="text-base">{event.date}</div>
+                          <div className="text-base text-gray-500">{event.date}</div>
                         </div>
                       </div>
                     </div>
