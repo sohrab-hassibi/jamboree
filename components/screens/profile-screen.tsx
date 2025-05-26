@@ -28,15 +28,15 @@ function UpcomingEvents() {
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
     return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
+      weekday: "short",
+      month: "numeric",
+      day: "numeric",
     });
   };
 
   const handleEventClick = (eventId: string) => {
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('openEvent', { detail: { eventId } });
+    if (typeof window !== "undefined") {
+      const event = new CustomEvent("openEvent", { detail: { eventId } });
       window.dispatchEvent(event);
     }
   };
@@ -55,7 +55,9 @@ function UpcomingEvents() {
         </div>
       ) : upcomingEvents.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-lg text-gray-500">No upcoming events... Check out the Events Page!</p>
+          <p className="text-lg text-gray-500">
+            No upcoming events... Check out the Events Page!
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -70,7 +72,10 @@ function UpcomingEvents() {
                 >
                   <div className="relative">
                     <Image
-                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
+                      src={
+                        event.image_url ||
+                        "/placeholder.svg?height=100&width=200"
+                      }
                       alt={event.title}
                       width={200}
                       height={100}
@@ -78,12 +83,14 @@ function UpcomingEvents() {
                     />
                     <span
                       className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                        event.participationStatus === 'going'
-                          ? 'text-green-700 bg-green-100'
-                          : 'text-yellow-700 bg-yellow-100'
+                        event.participationStatus === "going"
+                          ? "text-green-700 bg-green-100"
+                          : "text-yellow-700 bg-yellow-100"
                       }`}
                     >
-                      {event.participationStatus === 'going' ? 'Going ✅' : 'Maybe 🤔'}
+                      {event.participationStatus === "going"
+                        ? "Going ✅"
+                        : "Maybe 🤔"}
                     </span>
                   </div>
                   <div className="p-2">
@@ -108,15 +115,15 @@ function PostGamesEvents() {
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
     return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
+      weekday: "short",
+      month: "numeric",
+      day: "numeric",
     });
   };
 
   const handleEventClick = (eventId: string) => {
-    if (typeof window !== 'undefined') {
-      const event = new CustomEvent('openEvent', { detail: { eventId } });
+    if (typeof window !== "undefined") {
+      const event = new CustomEvent("openEvent", { detail: { eventId } });
       window.dispatchEvent(event);
     }
   };
@@ -135,7 +142,9 @@ function PostGamesEvents() {
         </div>
       ) : pastEvents.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-lg text-gray-500">No past events... Events that you have attended will show up here!</p>
+          <p className="text-lg text-gray-500">
+            No past events... Events that you have attended will show up here!
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -150,7 +159,10 @@ function PostGamesEvents() {
                 >
                   <div className="relative">
                     <Image
-                      src={event.image_url || '/placeholder.svg?height=100&width=200'}
+                      src={
+                        event.image_url ||
+                        "/placeholder.svg?height=100&width=200"
+                      }
                       alt={event.title}
                       width={200}
                       height={100}
@@ -158,13 +170,15 @@ function PostGamesEvents() {
                     />
                     <span
                       className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                        event.participationStatus === 'going'
-                          ? 'text-green-700 bg-green-100'
-                          : 'text-yellow-700 bg-yellow-100'
+                        event.participationStatus === "going"
+                          ? "text-green-700 bg-green-100"
+                          : "text-yellow-700 bg-yellow-100"
                       }`}
                     >
-                      {event.participationStatus === 'going' ? 'Attended ✅' : 'Was Interested 🤔'}
-                  </span>
+                      {event.participationStatus === "going"
+                        ? "Attended ✅"
+                        : "Was Interested 🤔"}
+                    </span>
                   </div>
                   <div className="p-2">
                     <div className="font-bold text-lg">{event.title}</div>
@@ -185,10 +199,15 @@ export default function ProfileScreen() {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [editProfileMode, setEditProfileMode] = useState(false);
   const [showIconSelector, setShowIconSelector] = useState(false);
-  const [iconSelectorType, setIconSelectorType] = useState<"instrument" | "genre">("instrument");
+  const [iconSelectorType, setIconSelectorType] = useState<
+    "instrument" | "genre"
+  >("instrument");
   const [iconLimitWarning, setIconLimitWarning] = useState(false);
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   // Music icons data
   const musicIcons: MusicIcon[] = [
@@ -208,7 +227,6 @@ export default function ProfileScreen() {
     { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
     { id: "country", name: "Country", emoji: "🤠", type: "genre" },
     { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-
   ];
 
   // Profile state
@@ -218,6 +236,7 @@ export default function ProfileScreen() {
     selectedIcons: [] as string[],
     instruments: [] as string[],
     genres: [] as string[],
+    avatar_url: "",
   });
 
   // Form state for editing
@@ -227,51 +246,58 @@ export default function ProfileScreen() {
     selectedIcons: [] as string[],
     instruments: [] as string[],
     genres: [] as string[],
+    avatar_url: "",
   });
-
 
   // Load user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         try {
           // Get the user's metadata which includes the full name from signup
-          const { data: { user: userData } } = await supabase.auth.getUser();
-          
+          const {
+            data: { user: userData },
+          } = await supabase.auth.getUser();
+
           // Fetch user profile data from Supabase
           const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
             .single();
 
           // Use the name from user metadata if available, otherwise fall back to profile data
-          const userName = userData?.user_metadata?.full_name || data?.full_name || '';
-          
+          const userName =
+            userData?.user_metadata?.full_name || data?.full_name || "";
+
           const profileData = {
             name: userName,
-            bio: data?.bio || '',
-            selectedIcons: [...(data?.instruments || []), ...(data?.genres || [])],
+            bio: data?.bio || "",
+            selectedIcons: [
+              ...(data?.instruments || []),
+              ...(data?.genres || []),
+            ],
             instruments: data?.instruments || [],
             genres: data?.genres || [],
+            avatar_url: data?.avatar_url || "",
           };
-          
+
           setProfile(profileData);
           setFormData(profileData);
-          
+
           // If we have a name from user metadata but not in the profile, update the profile
           if (userName && (!data || data.full_name !== userName)) {
-            await supabase
-              .from('profiles')
-              .upsert({
-                id: user.id,
-                full_name: userName,
-                updated_at: new Date().toISOString(),
-              });
+            await supabase.from("profiles").upsert({
+              id: user.id,
+              full_name: userName,
+              updated_at: new Date().toISOString(),
+            });
           }
         } catch (error) {
-          console.error('Error fetching profile:', error);
+          console.error("Error fetching profile:", error);
         }
       }
     };
@@ -302,112 +328,272 @@ export default function ProfileScreen() {
       alert("Image size should be less than 5MB");
       return;
     }
+
+    // Resize the image before preview to improve performance
+    const resizeImage = (
+      file: File,
+      maxWidth: number,
+      maxHeight: number
+    ): Promise<File> => {
+      return new Promise((resolve) => {
+        const imgElement = new window.Image();
+        imgElement.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = imgElement.width;
+          let height = imgElement.height;
+
+          // Calculate new dimensions while maintaining aspect ratio
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(imgElement, 0, 0, width, height);
+
+          // Convert to blob with reduced quality
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const resizedFile = new File([blob], file.name, {
+                  type: "image/jpeg",
+                  lastModified: Date.now(),
+                });
+                resolve(resizedFile);
+              } else {
+                resolve(file); // Fallback to original if resize fails
+              }
+            },
+            "image/jpeg",
+            0.7
+          ); // 70% quality JPEG
+        };
+        imgElement.src = URL.createObjectURL(file);
+      });
+    };
+
+    // Create preview immediately for better UX
     const reader = new FileReader();
     reader.onloadend = () => {
-      setProfileImageFile(file);
       setProfileImagePreview(reader.result as string);
+
+      // Resize the image in the background
+      resizeImage(file, 400, 400).then((resizedFile) => {
+        setProfileImageFile(resizedFile);
+        console.log(
+          `Image resized from ${file.size} to ${resizedFile.size} bytes`
+        );
+      });
     };
     reader.readAsDataURL(file);
   };
 
   // Function to save profile changes
   const handleSaveProfile = async () => {
+    console.log("Save profile button clicked");
+    setIsSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      console.log("Current user:", user?.id);
+      if (!user) throw new Error("User not authenticated");
 
       // Split selectedIcons into instruments and genres
       const instruments = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "instrument")
+        .map((icon) => icon?.id) as string[];
 
       const genres = formData.selectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "genre")
+        .map((icon) => icon?.id) as string[];
 
-      // Update profile in Supabase
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          full_name: formData.name,
-          bio: formData.bio,
-          instruments,
-          genres,
-          updated_at: new Date().toISOString(),
-        });
+      console.log("Processed instruments and genres:", { instruments, genres });
 
-      if (error) throw error;
-
-      // Update participant data in all events where this user is a participant
-      const { data: events, error: eventsError } = await supabase
-        .from('events')
-        .select('id, participants_going, participants_maybe')
-        .or(`participants_going.cs.["${user.id}"], participants_maybe.cs.["${user.id}"]`);
-
-      if (!eventsError && events) {
-        for (const event of events) {
-          // Update going participants
-          const updatedGoing = (event.participants_going || []).map((p: any) => {
-            let participant;
-            if (typeof p === 'string') {
-              try {
-                participant = JSON.parse(p);
-              } catch {
-                participant = { id: p };
-              }
-            } else {
-              participant = p;
-            }
-            
-            if (participant.id === user.id) {
-              return JSON.stringify({
-                ...participant,
-                full_name: formData.name,
-                instruments,
-                genres,
-              });
-            }
-            return typeof p === 'string' ? p : JSON.stringify(p);
+      // Upload profile image to Supabase Storage if a new image was selected
+      let avatarUrl = "";
+      if (profileImageFile) {
+        try {
+          // Upload to Supabase Storage
+          const fileExt = profileImageFile.name.split(".").pop();
+          const fileName = `profile-${Date.now()}.${fileExt}`;
+          const filePath = `profiles/${fileName}`;
+          
+          console.log("Uploading profile image:", {
+            filePath,
+            size: profileImageFile.size,
           });
 
-          // Update maybe participants
-          const updatedMaybe = (event.participants_maybe || []).map((p: any) => {
-            let participant;
-            if (typeof p === 'string') {
-              try {
-                participant = JSON.parse(p);
-              } catch {
-                participant = { id: p };
-              }
-            } else {
-              participant = p;
-            }
-            
-            if (participant.id === user.id) {
-              return JSON.stringify({
-                ...participant,
-                full_name: formData.name,
-                instruments,
-                genres,
+          // Upload the file to the event-images bucket with profiles subfolder
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from("event-images") // Use the same bucket as event images
+              .upload(filePath, profileImageFile, {
+                cacheControl: "3600",
+                upsert: true, // Set to true to overwrite existing files
               });
-            }
-            return typeof p === 'string' ? p : JSON.stringify(p);
-          });
 
-          // Update the event
-          await supabase
-            .from('events')
-            .update({
-              participants_going: updatedGoing,
-              participants_maybe: updatedMaybe,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', event.id);
+          if (uploadError) {
+            console.error("Upload error details:", uploadError);
+            throw new Error(`Upload failed: ${uploadError.message}`);
+          }
+
+          console.log("Upload successful:", uploadData);
+
+          // Get the public URL
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("event-images").getPublicUrl(filePath);
+
+          console.log("Generated public URL:", publicUrl);
+          avatarUrl = publicUrl;
+        } catch (error: any) {
+          console.error("Error in image upload process:", error);
+          const errorMessage =
+            error?.message || "Unknown error during image upload";
+          // Don't throw here, just log the error and continue without updating the image
+          console.error(`Image upload failed: ${errorMessage}`);
         }
       }
+
+      console.log("Preparing to update profile with:", {
+        id: user.id,
+        name: formData.name,
+        bio: formData.bio,
+        instruments,
+        genres,
+        avatarUrl: avatarUrl ? "Has URL" : "No new URL",
+      });
+
+      // Prepare the profile data
+      const profileData: any = {
+        id: user.id,
+        full_name: formData.name,
+        bio: formData.bio,
+        instruments,
+        genres,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Only include avatar_url if we have a new one
+      if (avatarUrl) {
+        profileData.avatar_url = avatarUrl;
+      }
+
+      console.log("Updating profile with data:", profileData);
+
+      // Update profile in Supabase
+      const { error } = await supabase.from("profiles").upsert(profileData);
+
+      if (error) {
+        console.error("Error updating profile:", error);
+        throw error;
+      }
+
+      console.log("Profile updated successfully");
+
+      // Update participant data in all events where this user is a participant
+      // But do this in the background without waiting for it to complete
+      // This makes the save operation feel much faster
+      const updateEventsPromise = (async () => {
+        try {
+          const { data: events, error: eventsError } = await supabase
+            .from("events")
+            .select("id, participants_going, participants_maybe")
+            .or(
+              `participants_going.cs.["${user.id}"], participants_maybe.cs.["${user.id}"]`
+            );
+
+          if (!eventsError && events && events.length > 0) {
+            console.log(
+              `Updating user info in ${events.length} events (background task)`
+            );
+
+            // Process all event updates in parallel
+            const updatePromises = events.map((event) => {
+              // Update going participants
+              const updatedGoing = (event.participants_going || []).map(
+                (p: any) => {
+                  let participant;
+                  if (typeof p === "string") {
+                    try {
+                      participant = JSON.parse(p);
+                    } catch {
+                      participant = { id: p };
+                    }
+                  } else {
+                    participant = p;
+                  }
+
+                  if (participant.id === user.id) {
+                    return JSON.stringify({
+                      ...participant,
+                      full_name: formData.name,
+                      instruments,
+                      genres,
+                    });
+                  }
+                  return typeof p === "string" ? p : JSON.stringify(p);
+                }
+              );
+
+              // Update maybe participants
+              const updatedMaybe = (event.participants_maybe || []).map(
+                (p: any) => {
+                  let participant;
+                  if (typeof p === "string") {
+                    try {
+                      participant = JSON.parse(p);
+                    } catch {
+                      participant = { id: p };
+                    }
+                  } else {
+                    participant = p;
+                  }
+
+                  if (participant.id === user.id) {
+                    return JSON.stringify({
+                      ...participant,
+                      full_name: formData.name,
+                      instruments,
+                      genres,
+                    });
+                  }
+                  return typeof p === "string" ? p : JSON.stringify(p);
+                }
+              );
+
+              // Update the event
+              return supabase
+                .from("events")
+                .update({
+                  participants_going: updatedGoing,
+                  participants_maybe: updatedMaybe,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", event.id);
+            });
+
+            // Execute all updates in parallel
+            await Promise.all(updatePromises);
+            console.log("Background event updates completed");
+          }
+        } catch (error) {
+          console.error("Error updating events in background:", error);
+          // Don't throw here since this is a background task
+        }
+      })();
 
       // Update local state
       const updatedProfile = {
@@ -416,20 +602,27 @@ export default function ProfileScreen() {
         selectedIcons: formData.selectedIcons,
         instruments,
         genres,
+        avatar_url: avatarUrl || profile.avatar_url,
       };
 
       setProfile(updatedProfile);
       setEditProfileMode(false);
       setShowIconSelector(false);
-      
-      console.log('Profile saved successfully, dispatching event...');
-      
+      setIsSaving(false);
+
+      console.log("Profile saved successfully, dispatching event...");
+
       // Dispatch event to notify other components that profile was updated
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('profileUpdated'));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("profileUpdated"));
       }
+
+      // No need to await the background event updates
+      // Let them complete in the background
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error("Error saving profile:", error);
+      setIsSaving(false);
+      alert("Error saving profile. Please try again.");
     }
   };
 
@@ -441,6 +634,7 @@ export default function ProfileScreen() {
       selectedIcons: [...profile.selectedIcons],
       instruments: [...profile.instruments],
       genres: [...profile.genres],
+      avatar_url: profile.avatar_url,
     });
     setEditProfileMode(false);
     setShowIconSelector(false);
@@ -467,20 +661,21 @@ export default function ProfileScreen() {
 
       // Update instruments and genres based on selected icons
       const instruments = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'instrument')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "instrument")
+        .map((icon) => icon?.id) as string[];
 
       const genres = newSelectedIcons
-        .map(id => musicIcons.find(icon => icon.id === id))
-        .filter(icon => icon?.type === 'genre')
-        .map(icon => icon?.id) as string[];
+        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .filter((icon) => icon?.type === "genre")
+        .map((icon) => icon?.id) as string[];
 
       return {
         ...prev,
         selectedIcons: newSelectedIcons,
         instruments,
         genres,
+        avatar_url: prev.avatar_url,
       };
     });
   };
@@ -534,15 +729,26 @@ export default function ProfileScreen() {
                       isSelected ? "bg-[#ffd2b0]" : "bg-gray-100"
                     }`}
                     onClick={() => {
-                      if (!isSelected && formData.selectedIcons.length >= MAX_ICONS) {
+                      if (
+                        !isSelected &&
+                        formData.selectedIcons.length >= MAX_ICONS
+                      ) {
                         setIconLimitWarning(true);
                         return;
                       }
                       toggleIconSelection(icon.id);
                     }}
                     style={{
-                      opacity: !isSelected && formData.selectedIcons.length >= MAX_ICONS ? 0.5 : 1,
-                      cursor: !isSelected && formData.selectedIcons.length >= MAX_ICONS ? "not-allowed" : "pointer",
+                      opacity:
+                        !isSelected &&
+                        formData.selectedIcons.length >= MAX_ICONS
+                          ? 0.5
+                          : 1,
+                      cursor:
+                        !isSelected &&
+                        formData.selectedIcons.length >= MAX_ICONS
+                          ? "not-allowed"
+                          : "pointer",
                     }}
                   >
                     <div className="text-3xl mb-2">{icon.emoji}</div>
@@ -593,20 +799,41 @@ export default function ProfileScreen() {
             <div className="flex flex-col items-center">
               <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100">
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100 relative">
                   <Image
-                    src={"/placeholder.svg?height=160&width=160"}
+                    src={
+                      profileImagePreview ||
+                      profile.avatar_url ||
+                      "/placeholder.svg?height=160&width=160"
+                    }
                     alt="Profile"
                     width={160}
                     height={160}
-                    className="object-cover"
+                    className="object-cover w-full h-full"
                   />
+
+                  {/* Upload button overlay */}
+                  <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
+                    <span className="text-white text-sm font-medium">
+                      Change Photo
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfileImageChange}
+                    />
+                  </label>
                 </div>
                 {/* Icons absolutely positioned in this larger container */}
                 {formData.selectedIcons
                   .concat(
-                    formData.instruments.filter((id) => !formData.selectedIcons.includes(id)),
-                    formData.genres.filter((id) => !formData.selectedIcons.includes(id))
+                    formData.instruments.filter(
+                      (id) => !formData.selectedIcons.includes(id)
+                    ),
+                    formData.genres.filter(
+                      (id) => !formData.selectedIcons.includes(id)
+                    )
                   )
                   .map((iconId, index, arr) => {
                     const icon = musicIcons.find((i) => i.id === iconId);
@@ -656,7 +883,10 @@ export default function ProfileScreen() {
               </div>
 
               <div>
-                <label htmlFor="bio" className="block text-base font-medium mb-2">
+                <label
+                  htmlFor="bio"
+                  className="block text-base font-medium mb-2"
+                >
                   Bio
                 </label>
                 <Textarea
@@ -751,8 +981,16 @@ export default function ProfileScreen() {
                 isDesktop ? "" : "flex-1"
               }`}
               onClick={handleSaveProfile}
+              disabled={isSaving}
             >
-              Save Changes
+              {isSaving ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
             </Button>
           </div>
         </div>
@@ -779,7 +1017,11 @@ export default function ProfileScreen() {
                   selectedIcons: [...profile.selectedIcons],
                   instruments: [...profile.instruments],
                   genres: [...profile.genres],
+                  avatar_url: profile.avatar_url,
                 });
+                // Reset image preview when entering edit mode
+                setProfileImagePreview(null);
+                setProfileImageFile(null);
               }}
             >
               Edit Profile
@@ -790,9 +1032,9 @@ export default function ProfileScreen() {
                 try {
                   const { error } = await supabase.auth.signOut();
                   if (error) throw error;
-                  router.push('/login');
+                  router.push("/login");
                 } catch (error) {
-                  console.error('Error signing out:', error);
+                  console.error("Error signing out:", error);
                 }
               }}
               className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
@@ -812,12 +1054,26 @@ export default function ProfileScreen() {
               <div className="relative w-80 h-80 mb-2">
                 {/* Avatar centered */}
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100">
+                  <Image
+                    src={
+                      profile.avatar_url ||
+                      "/placeholder.svg?height=160&width=160"
+                    }
+                    alt="Profile"
+                    width={160}
+                    height={160}
+                    className="object-cover w-full h-full"
+                  />
                 </div>
                 {/* Icons absolutely positioned in this larger container */}
                 {profile.selectedIcons
                   .concat(
-                    profile.instruments.filter((id) => !profile.selectedIcons.includes(id)),
-                    profile.genres.filter((id) => !profile.selectedIcons.includes(id))
+                    profile.instruments.filter(
+                      (id) => !profile.selectedIcons.includes(id)
+                    ),
+                    profile.genres.filter(
+                      (id) => !profile.selectedIcons.includes(id)
+                    )
                   )
                   .map((iconId, index, arr) => {
                     const icon = musicIcons.find((i) => i.id === iconId);
@@ -871,12 +1127,16 @@ export default function ProfileScreen() {
                           className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
                         >
                           <span className="mr-2">{icon?.emoji || "🎸"}</span>
-                          <span className="text-sm">{icon?.name || instrument}</span>
+                          <span className="text-sm">
+                            {icon?.name || instrument}
+                          </span>
                         </div>
                       );
                     })}
                     {!profile.instruments.length && (
-                      <span className="text-sm text-gray-500 italic">No instruments selected</span>
+                      <span className="text-sm text-gray-500 italic">
+                        No instruments selected
+                      </span>
                     )}
                   </div>
                 </div>
@@ -897,7 +1157,9 @@ export default function ProfileScreen() {
                       );
                     })}
                     {!profile.genres.length && (
-                      <span className="text-sm text-gray-500 italic">No genres selected</span>
+                      <span className="text-sm text-gray-500 italic">
+                        No genres selected
+                      </span>
                     )}
                   </div>
                 </div>
@@ -923,6 +1185,7 @@ export default function ProfileScreen() {
                 selectedIcons: [...profile.selectedIcons],
                 instruments: [...profile.instruments],
                 genres: [...profile.genres],
+                avatar_url: profile.avatar_url,
               });
             }}
           >
@@ -935,9 +1198,9 @@ export default function ProfileScreen() {
               try {
                 const { error } = await supabase.auth.signOut();
                 if (error) throw error;
-                router.push('/login');
+                router.push("/login");
               } catch (error) {
-                console.error('Error signing out:', error);
+                console.error("Error signing out:", error);
               }
             }}
           >
