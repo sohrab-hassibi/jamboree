@@ -264,7 +264,8 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
     
     return (
       <div className="p-4 md:p-8 space-y-6">
-        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100">
+        {/* Make the image container smaller */}
+        <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100 max-h-64 md:max-h-80">
           <Image
             src={eventImage}
             alt={event.title}
@@ -689,21 +690,8 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                     )}
                     Maybe
                   </Button>
-                  {(participationStatus === 'going' || participationStatus === 'maybe') && (
-                    <Button 
-                      onClick={() => {
-                        if (participationStatus === 'going') handleMaybe();
-                        else handleGoing();
-                      }}
-                      size="sm"
-                      variant="ghost"
-                      className="w-full text-sm text-gray-500 hover:text-gray-700"
-                    >
-                      Change to {participationStatus === 'going' ? 'Maybe' : 'Going'}
-                    </Button>
-                  )}
                 </div>
-                  <h2 className="font-medium">Participants</h2>
+                <h2 className="font-medium">Participants</h2>
               </div>
               <div className="p-2">
                 <div className="flex border-b mb-2">
