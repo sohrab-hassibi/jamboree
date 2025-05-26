@@ -41,18 +41,18 @@ export default function ProfilePhotoStep({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      // Upload file to Supabase storage
+      // Upload file to Supabase storage in the event-images bucket under profiles folder
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const fileName = `profiles/${user.id}-${Date.now()}.${fileExt}`;
       const { error: uploadError, data } = await supabase.storage
-        .from('avatars')
+        .from('event-images')
         .upload(fileName, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('event-images')
         .getPublicUrl(fileName);
 
       onChange(publicUrl);
