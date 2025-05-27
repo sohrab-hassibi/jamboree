@@ -28,7 +28,19 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
-      // Sign in with email and password
+      // First check if the email exists in the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', formData.email)
+        .single();
+      
+      // If there's an error or no user found with this email
+      if (userError || !userData) {
+        throw new Error('No account exists with this email. Please sign up first.');
+      }
+      
+      // Only proceed with sign in if the email exists in the users table
       const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
