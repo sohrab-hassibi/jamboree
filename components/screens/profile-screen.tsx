@@ -252,53 +252,111 @@ export default function ProfileScreen() {
   // Load user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        try {
-          // Get the user's metadata which includes the full name from signup
-          const {
-            data: { user: userData },
-          } = await supabase.auth.getUser();
-
-          // Fetch user profile data from Supabase
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", user.id)
-            .single();
-
-          // Use the name from user metadata if available, otherwise fall back to profile data
-          const userName =
-            userData?.user_metadata?.full_name || data?.full_name || "";
-
-          const profileData = {
-            name: userName,
-            bio: data?.bio || "",
-            selectedIcons: [
-              ...(data?.instruments || []),
-              ...(data?.genres || []),
-            ],
-            instruments: data?.instruments || [],
-            genres: data?.genres || [],
-            avatar_url: data?.avatar_url || "",
-          };
-
-          setProfile(profileData);
-          setFormData(profileData);
-
-          // If we have a name from user metadata but not in the profile, update the profile
-          if (userName && (!data || data.full_name !== userName)) {
-            await supabase.from("profiles").upsert({
-              id: user.id,
-              full_name: userName,
-              updated_at: new Date().toISOString(),
-            });
-          }
-        } catch (error) {
-          console.error("Error fetching profile:", error);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('No authenticated user found');
+          return;
         }
+        
+        console.log('Fetching profile for user:', user.id);
+        
+        // Get the user's metadata which includes the full name from signup
+        const userData = user;
+
+        // Fetch user profile data from Supabase with retry mechanism
+        let profileData = null;
+        let fetchError = null;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (!profileData && attempts < maxAttempts) {
+          attempts++;
+          try {
+            console.log(`Profile fetch attempt ${attempts}`);
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", user.id)
+              .single();
+              
+            if (error) {
+              console.warn(`Profile fetch attempt ${attempts} failed:`, error);
+              fetchError = error;
+              // Wait before retry
+              if (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            } else {
+              profileData = data;
+              console.log('Profile data fetched successfully:', profileData);
+            }
+          } catch (err) {
+            console.error(`Error in profile fetch attempt ${attempts}:`, err);
+            fetchError = err;
+            if (attempts < maxAttempts) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+        }
+
+        // Use the name from user metadata if available, otherwise fall back to profile data
+        const userName = userData?.user_metadata?.full_name || (profileData?.full_name || "");
+        
+        // If we still couldn't get profile data after retries, create a basic profile
+        if (!profileData) {
+          console.log('Creating fallback profile data');
+          profileData = {
+            id: user.id,
+            full_name: userName,
+            bio: "",
+            instruments: [],
+            genres: [],
+            avatar_url: userData?.user_metadata?.avatar_url || "",
+          };
+          
+          // Try to create the profile
+          try {
+            const { error: upsertError } = await supabase.from("profiles").upsert(profileData);
+            if (upsertError) {
+              console.error('Error creating fallback profile:', upsertError);
+            } else {
+              console.log('Created fallback profile successfully');
+            }
+          } catch (upsertErr) {
+            console.error('Exception creating fallback profile:', upsertErr);
+          }
+        }
+
+        const formattedProfileData = {
+          name: userName,
+          bio: profileData?.bio || "",
+          selectedIcons: [
+            ...(profileData?.instruments || []),
+            ...(profileData?.genres || []),
+          ],
+          instruments: profileData?.instruments || [],
+          genres: profileData?.genres || [],
+          avatar_url: userData?.user_metadata?.avatar_url || profileData?.avatar_url || "",
+        };
+
+        console.log('Setting profile state with:', formattedProfileData);
+        setProfile(formattedProfileData);
+        setFormData(formattedProfileData);
+
+        // If we have a name from user metadata but not in the profile, update the profile
+        if (userName && (!profileData || profileData.full_name !== userName)) {
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            full_name: userName,
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } catch (error) {
+        console.error("Error in fetchUserProfile:", error);
       }
     };
 
