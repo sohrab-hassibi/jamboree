@@ -29,8 +29,9 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
     const fetchProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        // First try to get the name from user_metadata (from signup)
+        // First try to get the name and avatar from user_metadata (from signup/auth)
         const userName = user.user_metadata?.full_name || ''
+        const userAvatar = user.user_metadata?.avatar_url
         
         // Then try to get the full profile
         const { data } = await supabase
@@ -44,7 +45,8 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
           bio: data?.bio,
           instruments: data?.instruments || [],
           genres: data?.genres || [],
-          avatar_url: data?.avatar_url
+          // Prioritize the avatar from auth metadata as it's updated immediately
+          avatar_url: userAvatar || data?.avatar_url
         })
       }
     }
@@ -63,22 +65,47 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
             return user?.id
           })()}`
         }, 
-        (payload) => {
+        async (payload) => {
           if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            // When profile changes, get the latest auth metadata too
+            const { data: { user } } = await supabase.auth.getUser()
+            const userAvatar = user?.user_metadata?.avatar_url
+            
             setProfile(prev => ({
               ...prev,
               ...payload.new,
-              name: payload.new.full_name || prev.name
+              name: payload.new.full_name || prev.name,
+              // Prioritize auth metadata for avatar_url as it's updated immediately
+              avatar_url: userAvatar || payload.new.avatar_url || prev.avatar_url
             }))
           }
         }
       )
       .subscribe()
+      
+    // Also listen for auth state changes which include metadata updates
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'USER_UPDATED' && session?.user) {
+          const userAvatar = session.user.user_metadata?.avatar_url
+          if (userAvatar) {
+            setProfile(prev => ({
+              ...prev,
+              avatar_url: userAvatar
+            }))
+          }
+        }
+      }
+    )
 
     fetchProfile()
 
     return () => {
       supabase.removeChannel(channel)
+      // Also clean up the auth subscription
+      if (authSubscription) {
+        authSubscription.unsubscribe()
+      }
     }
   }, [])
   const navItems = [
@@ -114,9 +141,28 @@ export function Sidebar({ activeScreen, setActiveScreen, selectedEvent, onOpenEv
         }}
       >
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={profile.avatar_url || "/placeholder.svg?height=40&width=40"} alt="Profile" />
-            <AvatarFallback>{profile.name ? profile.name.charAt(0) : 'U'}</AvatarFallback>
+          <Avatar className="h-12 w-12 relative">
+            {profile.avatar_url ? (
+              <>
+                <AvatarImage 
+                  src={profile.avatar_url} 
+                  alt="Profile" 
+                  className="object-cover"
+                  loading="eager"
+                />
+                <AvatarFallback>{profile.name ? profile.name.charAt(0) : 'U'}</AvatarFallback>
+              </>
+            ) : (
+              <>
+                <AvatarImage 
+                  src="/placeholder.svg?height=48&width=48" 
+                  alt="Profile" 
+                  className="object-cover"
+                  loading="eager"
+                />
+                <AvatarFallback>{profile.name ? profile.name.charAt(0) : 'U'}</AvatarFallback>
+              </>
+            )}
           </Avatar>
           <div>
             <div className="font-medium text-lg">{profile.name}</div>

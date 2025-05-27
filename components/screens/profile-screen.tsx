@@ -495,6 +495,13 @@ export default function ProfileScreen() {
 
       // Update profile in Supabase
       const { error } = await supabase.from("profiles").upsert(profileData);
+      
+      // If we have a new avatar URL, also update the auth metadata to ensure it propagates everywhere
+      if (avatarUrl) {
+        await supabase.auth.updateUser({
+          data: { avatar_url: avatarUrl }
+        });
+      }
 
       if (error) {
         console.error("Error updating profile:", error);
