@@ -447,9 +447,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                               {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
                             </span>
                           ))
-                        ) : (
-                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
-                        )}
+                        ) : null}
                         
                         {participant.genres && participant.genres.length > 0 ? (
                           participant.genres.slice(0, 1).map(genre => (
@@ -461,9 +459,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                               {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
                             </span>
                           ))
-                        ) : (
-                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -506,9 +502,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                               {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
                             </span>
                           ))
-                        ) : (
-                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
-                        )}
+                        ) : null}
                         
                         {participant.genres && participant.genres.length > 0 ? (
                           participant.genres.slice(0, 1).map(genre => (
@@ -520,9 +514,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                               {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
                             </span>
                           ))
-                        ) : (
-                          <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
