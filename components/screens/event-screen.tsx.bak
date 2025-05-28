@@ -602,8 +602,9 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           <EventDetailView />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-0 overflow-y-auto pb-[120px] md:pb-[80px]">
+        <div className="flex-1 relative">
+          {/* Messages area */}
+          <div className="absolute inset-0 overflow-y-auto" style={{paddingBottom: '120px'}}>
             <div className="p-4 md:p-6 space-y-4">
               {isLoadingMessages ? (
                 <div className="flex justify-center my-4">
@@ -616,7 +617,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                   No messages yet. Be the first to say hello!
                 </div>
               ) : (
-                <>
+                <div className="space-y-4">
                   {messages.map((message) => {
                     const isCurrentUser = message.user_id === user?.id;
                     const messageDate = new Date(message.created_at);
@@ -666,7 +667,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                   })}
                   {/* This empty div is used as a reference for auto-scrolling */}
                   <div ref={messagesEndRef} />
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -759,10 +760,9 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
             </div>
           )}
         </div>
-      )}
 
-      {activeView === 'chat' && (
-        <div className="border-t p-3 absolute bottom-0 left-0 right-0 bg-white pb-[calc(0.75rem+56px)] lg:pb-3 z-10">
+        {/* Chat input - fixed at the bottom, not part of the scrollable area */}
+        <div className="border-t p-3 bg-white pb-[calc(0.75rem+56px)] lg:pb-3 fixed bottom-0 left-0 right-0 z-10">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
             <Input 
               placeholder="Type your message..." 
