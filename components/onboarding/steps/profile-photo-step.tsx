@@ -106,7 +106,7 @@ export default function ProfilePhotoStep({
               className="object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-50">
+            <div className="w-full h-full flex items-center justify-center">
               <Upload className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
             </div>
           )}

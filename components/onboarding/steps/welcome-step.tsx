@@ -20,19 +20,19 @@ export default function WelcomeStep({ onNext }: WelcomeStepProps) {
           <h2 className="text-lg font-semibold">What's next?</h2>
           <ul className="text-left space-y-2">
             <li className="flex items-center">
-              <span className="bg-green-100 text-green-800 p-1 rounded-full mr-2">✓</span>
+              <span className="text-green-600 font-medium mr-2">✓</span>
               Upload a profile photo
             </li>
             <li className="flex items-center">
-              <span className="bg-green-100 text-green-800 p-1 rounded-full mr-2">✓</span>
+              <span className="text-green-600 font-medium mr-2">✓</span>
               Select your instruments
             </li>
             <li className="flex items-center">
-              <span className="bg-green-100 text-green-800 p-1 rounded-full mr-2">✓</span>
+              <span className="text-green-600 font-medium mr-2">✓</span>
               Choose your favorite genres
             </li>
             <li className="flex items-center">
-              <span className="bg-green-100 text-green-800 p-1 rounded-full mr-2">✓</span>
+              <span className="text-green-600 font-medium mr-2">✓</span>
               Tell us about yourself
             </li>
           </ul>
