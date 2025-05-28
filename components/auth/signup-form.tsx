@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/SupabaseContext"
+import { toast } from "sonner"
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -31,26 +32,101 @@ export default function SignupForm() {
     setIsLoading(true);
 
     try {
-      // Sign up the user with email
-      const { error: signUpError } = await supabase.auth.signUp({
+      // Sign up the user with email (no email confirmation)
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             full_name: formData.fullName,
           },
-          emailRedirectTo: `${window.location.origin}/login`,
         },
       });
 
       if (signUpError) throw signUpError;
       
-      // Show confirmation for email signup
-      setEmail(formData.email);
-      setShowConfirmation(true);
+      // Check if the user was created but not confirmed
+      if (data?.user && !data.user.email_confirmed_at) {
+        console.log('User created but not confirmed, attempting to sign in anyway');
+        
+        // Try to sign in even though email isn't confirmed
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (signInError) {
+          // If we get an error about email confirmation, we'll handle it specially
+          if (signInError.message.includes('Email not confirmed')) {
+            console.log('Email not confirmed error, but proceeding anyway');
+            // We'll continue with the flow despite the error
+          } else {
+            // For other errors, we'll throw them
+            throw signInError;
+          }
+        }
+      } else {
+        // Normal sign in if user was created and confirmed
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (signInError) throw signInError;
+      }
       
-      // For phone signups, proceed with OTP verification
-      toast.success("Verification code sent to your phone!");
+      // Add a small delay to ensure the auth record is fully propagated
+      // This helps with foreign key constraints
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        // First create a user entry - this is needed for the foreign key constraint in profiles
+        // Ensure data.user exists before using it
+        if (!data?.user?.id) {
+          console.error('User data not available after signup');
+          throw new Error('User data not available after signup');
+        }
+        
+        const { error: userError } = await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            email: formData.email,
+            full_name: formData.fullName,
+            created_at: new Date().toISOString(),
+          });
+            
+        if (userError) {
+          console.error('Error creating user record:', userError);
+          console.error('User error details:', JSON.stringify(userError));
+        } else {
+          console.log('User record created successfully');
+          
+          // Now create the profile entry after the user entry is created
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              full_name: formData.fullName,
+              bio: '',
+              instruments: [],
+              genres: [],
+              updated_at: new Date().toISOString(),
+            });
+              
+          if (profileError) {
+            console.error('Error creating profile:', profileError);
+            console.error('Profile error details:', JSON.stringify(profileError));
+          } else {
+            console.log('Profile created successfully');
+          }
+        }
+      } catch (dbError) {
+        console.error('Database operation error:', dbError);
+      }
+      
+      toast.success("Account created successfully!");
+      router.push("/");
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -68,7 +144,7 @@ export default function SignupForm() {
           Please check your inbox and click the link to verify your email address.
         </p>
         <p className="text-sm text-gray-600 mb-6">
-          Didn't receive the email? Check your spam folder or request a new link.
+          After verifying your email, you'll be taken through a quick setup process to customize your profile.
         </p>
         <div className="space-y-3">
           <Button

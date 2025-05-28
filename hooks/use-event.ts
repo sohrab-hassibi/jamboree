@@ -35,7 +35,7 @@ interface SupabaseError extends Error {
 // Helper function to fetch user details
 const fetchUserDetails = async (userId: string): Promise<Participant> => {
   const { data, error } = await supabase
-    .from('users')
+    .from('profiles')
     .select('id, full_name, avatar_url')
     .eq('id', userId)
     .single();
@@ -52,7 +52,7 @@ const fetchUserDetails = async (userId: string): Promise<Participant> => {
   return {
     id: data.id,
     full_name: data.full_name || 'User',
-    avatar_url: data.avatar_url || '/placeholder.svg'
+    avatar_url: data.avatar_url // Use actual profile image URL
   };
 };
 
@@ -116,7 +116,7 @@ export const useEvent = (eventId: string) => {
       
       if (userIdsToFetch.length > 0) {
         const { data: users, error } = await supabase
-          .from('users')
+          .from('profiles')
           .select('id, full_name, avatar_url')
           .in('id', userIdsToFetch);
 
