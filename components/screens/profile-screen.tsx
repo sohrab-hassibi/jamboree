@@ -256,14 +256,14 @@ export default function ProfileScreen() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        
+
         if (!user) {
-          console.log('No authenticated user found');
+          console.log("No authenticated user found");
           return;
         }
-        
-        console.log('Fetching profile for user:', user.id);
-        
+
+        console.log("Fetching profile for user:", user.id);
+
         // Get the user's metadata which includes the full name from signup
         const userData = user;
 
@@ -272,7 +272,7 @@ export default function ProfileScreen() {
         let fetchError = null;
         let attempts = 0;
         const maxAttempts = 3;
-        
+
         while (!profileData && attempts < maxAttempts) {
           attempts++;
           try {
@@ -282,33 +282,34 @@ export default function ProfileScreen() {
               .select("*")
               .eq("id", user.id)
               .single();
-              
+
             if (error) {
               console.warn(`Profile fetch attempt ${attempts} failed:`, error);
               fetchError = error;
               // Wait before retry
               if (attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise((resolve) => setTimeout(resolve, 1000));
               }
             } else {
               profileData = data;
-              console.log('Profile data fetched successfully:', profileData);
+              console.log("Profile data fetched successfully:", profileData);
             }
           } catch (err) {
             console.error(`Error in profile fetch attempt ${attempts}:`, err);
             fetchError = err;
             if (attempts < maxAttempts) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise((resolve) => setTimeout(resolve, 1000));
             }
           }
         }
 
         // Use the name from user metadata if available, otherwise fall back to profile data
-        const userName = userData?.user_metadata?.full_name || (profileData?.full_name || "");
-        
+        const userName =
+          userData?.user_metadata?.full_name || profileData?.full_name || "";
+
         // If we still couldn't get profile data after retries, create a basic profile
         if (!profileData) {
-          console.log('Creating fallback profile data');
+          console.log("Creating fallback profile data");
           profileData = {
             id: user.id,
             full_name: userName,
@@ -317,17 +318,19 @@ export default function ProfileScreen() {
             genres: [],
             avatar_url: userData?.user_metadata?.avatar_url || "",
           };
-          
+
           // Try to create the profile
           try {
-            const { error: upsertError } = await supabase.from("profiles").upsert(profileData);
+            const { error: upsertError } = await supabase
+              .from("profiles")
+              .upsert(profileData);
             if (upsertError) {
-              console.error('Error creating fallback profile:', upsertError);
+              console.error("Error creating fallback profile:", upsertError);
             } else {
-              console.log('Created fallback profile successfully');
+              console.log("Created fallback profile successfully");
             }
           } catch (upsertErr) {
-            console.error('Exception creating fallback profile:', upsertErr);
+            console.error("Exception creating fallback profile:", upsertErr);
           }
         }
 
@@ -340,10 +343,13 @@ export default function ProfileScreen() {
           ],
           instruments: profileData?.instruments || [],
           genres: profileData?.genres || [],
-          avatar_url: userData?.user_metadata?.avatar_url || profileData?.avatar_url || "",
+          avatar_url:
+            userData?.user_metadata?.avatar_url ||
+            profileData?.avatar_url ||
+            "",
         };
 
-        console.log('Setting profile state with:', formattedProfileData);
+        console.log("Setting profile state with:", formattedProfileData);
         setProfile(formattedProfileData);
         setFormData(formattedProfileData);
 
@@ -487,7 +493,7 @@ export default function ProfileScreen() {
           const fileExt = profileImageFile.name.split(".").pop();
           const fileName = `profile-${Date.now()}.${fileExt}`;
           const filePath = `profiles/${fileName}`;
-          
+
           console.log("Uploading profile image:", {
             filePath,
             size: profileImageFile.size,
@@ -553,11 +559,11 @@ export default function ProfileScreen() {
 
       // Update profile in Supabase
       const { error } = await supabase.from("profiles").upsert(profileData);
-      
+
       // If we have a new avatar URL, also update the auth metadata to ensure it propagates everywhere
       if (avatarUrl) {
         await supabase.auth.updateUser({
-          data: { avatar_url: avatarUrl }
+          data: { avatar_url: avatarUrl },
         });
       }
 
@@ -573,87 +579,147 @@ export default function ProfileScreen() {
       // This makes the save operation feel much faster
       const updateEventsPromise = (async () => {
         try {
+          console.log("Starting event participant update process");
+          
+          // Get all events where the user is a participant (either going or maybe)
+          // We need to search for the user ID in the JSON arrays
           const { data: events, error: eventsError } = await supabase
             .from("events")
-            .select("id, participants_going, participants_maybe")
-            .or(
-              `participants_going.cs.["${user.id}"], participants_maybe.cs.["${user.id}"]`
-            );
-
-          if (!eventsError && events && events.length > 0) {
-            console.log(
-              `Updating user info in ${events.length} events (background task)`
-            );
-
-            // Process all event updates in parallel
-            const updatePromises = events.map((event) => {
-              // Update going participants
-              const updatedGoing = (event.participants_going || []).map(
-                (p: any) => {
-                  let participant;
-                  if (typeof p === "string") {
-                    try {
-                      participant = JSON.parse(p);
-                    } catch {
-                      participant = { id: p };
-                    }
-                  } else {
-                    participant = p;
+            .select("id, participants_going, participants_maybe");
+            
+          // Filter events client-side to find those where the user is a participant
+          const userEvents = events?.filter(event => {
+            // Helper function to check if user is in participant list
+            const isUserInList = (participants: any[]) => {
+              if (!participants || !Array.isArray(participants)) return false;
+              
+              return participants.some(p => {
+                if (typeof p === "string") {
+                  try {
+                    const parsed = JSON.parse(p);
+                    return parsed.id === user.id;
+                  } catch {
+                    return p === user.id;
                   }
-
-                  if (participant.id === user.id) {
-                    return JSON.stringify({
-                      ...participant,
-                      full_name: formData.name,
-                      instruments,
-                      genres,
-                    });
-                  }
-                  return typeof p === "string" ? p : JSON.stringify(p);
                 }
-              );
+                return p?.id === user.id;
+              });
+            };
+            
+            // Check both going and maybe lists
+            return isUserInList(event.participants_going) || isUserInList(event.participants_maybe);
+          }) || [];
 
-              // Update maybe participants
-              const updatedMaybe = (event.participants_maybe || []).map(
-                (p: any) => {
-                  let participant;
-                  if (typeof p === "string") {
-                    try {
-                      participant = JSON.parse(p);
-                    } catch {
-                      participant = { id: p };
-                    }
-                  } else {
-                    participant = p;
-                  }
+          if (eventsError) {
+            console.error("Error fetching events:", eventsError);
+            return;
+          }
 
-                  if (participant.id === user.id) {
-                    return JSON.stringify({
-                      ...participant,
-                      full_name: formData.name,
-                      instruments,
-                      genres,
-                    });
+          if (!userEvents || userEvents.length === 0) {
+            console.log("No events found where user is a participant");
+            return;
+          }
+
+          console.log(`Found ${userEvents.length} events to update participant info in`);
+
+          // Create the updated participant object with all the latest profile information
+          const updatedParticipant = {
+            id: user.id,
+            full_name: formData.name,
+            avatar_url: avatarUrl || formData.avatar_url, // Use new avatar URL if available
+            instruments: instruments, // Use explicit assignment to avoid TypeScript errors
+            genres: genres, // Use explicit assignment to avoid TypeScript errors
+          };
+
+          console.log("Updated participant object:", updatedParticipant);
+
+          // Process each event one by one
+          for (const event of userEvents) {
+            try {
+              console.log(`Processing event ${event.id}`);
+              
+              // Helper function to parse participant data safely
+              const parseParticipant = (p: any) => {
+                if (!p) return null;
+                if (typeof p === "string") {
+                  try {
+                    return JSON.parse(p);
+                  } catch (e) {
+                    console.error("Error parsing participant:", e);
+                    return { id: p };
                   }
-                  return typeof p === "string" ? p : JSON.stringify(p);
                 }
-              );
+                return p;
+              };
+              
+              // Process participants arrays
+              const processParticipants = (participants: any[] = []) => {
+                return participants
+                  .map(parseParticipant)
+                  .filter(p => p !== null);
+              };
+
+              // Get current participants
+              let goingParticipants = processParticipants(event.participants_going);
+              let maybeParticipants = processParticipants(event.participants_maybe);
+
+              // Check if user is in going or maybe lists
+              const userInGoing = goingParticipants.some(p => p.id === user.id);
+              const userInMaybe = maybeParticipants.some(p => p.id === user.id);
+
+              console.log(`User participation status - Going: ${userInGoing}, Maybe: ${userInMaybe}`);
+
+              // Remove user from both arrays first
+              goingParticipants = goingParticipants.filter(p => p.id !== user.id);
+              maybeParticipants = maybeParticipants.filter(p => p.id !== user.id);
+
+              // Add user back to the appropriate array(s) with updated information
+              if (userInGoing) {
+                console.log("Re-adding user to going list with updated info");
+                goingParticipants.push(updatedParticipant);
+              }
+              
+              if (userInMaybe) {
+                console.log("Re-adding user to maybe list with updated info");
+                maybeParticipants.push(updatedParticipant);
+              }
+
+              // Stringify the participant objects for storage
+              const stringifyParticipants = (participants: any[]) => {
+                return participants.map(p => JSON.stringify(p));
+              };
+
+              // Prepare update data
+              const updateData = {
+                participants_going: stringifyParticipants(goingParticipants),
+                participants_maybe: stringifyParticipants(maybeParticipants),
+                updated_at: new Date().toISOString(),
+              };
 
               // Update the event
-              return supabase
+              const { error: updateError } = await supabase
                 .from("events")
-                .update({
-                  participants_going: updatedGoing,
-                  participants_maybe: updatedMaybe,
-                  updated_at: new Date().toISOString(),
-                })
+                .update(updateData)
                 .eq("id", event.id);
-            });
 
-            // Execute all updates in parallel
-            await Promise.all(updatePromises);
-            console.log("Background event updates completed");
+              if (updateError) {
+                console.error(`Error updating event ${event.id}:`, updateError);
+              } else {
+                console.log(`Successfully updated event ${event.id}`);
+              }
+            } catch (eventError) {
+              console.error(`Error processing event ${event.id}:`, eventError);
+              // Continue with other events even if one fails
+            }
           }
+
+          console.log("Completed updating participant info in all events");
+          
+          // Dispatch a custom event to ensure immediate updates across components
+          const event = new CustomEvent('profileUpdated', { 
+            detail: { userId: user.id } 
+          });
+          window.dispatchEvent(event);
         } catch (error) {
           console.error("Error updating events in background:", error);
           // Don't throw here since this is a background task
@@ -665,9 +731,9 @@ export default function ProfileScreen() {
         name: formData.name,
         bio: formData.bio,
         selectedIcons: formData.selectedIcons,
-        instruments,
-        genres,
-        avatar_url: avatarUrl || profile.avatar_url,
+        instruments: instruments, // Use explicit assignment to avoid TypeScript errors
+        genres: genres, // Use explicit assignment to avoid TypeScript errors
+        avatar_url: avatarUrl || formData.avatar_url,
       };
 
       setProfile(updatedProfile);

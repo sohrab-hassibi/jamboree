@@ -63,7 +63,7 @@ export default function LoginForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium mb-1">
-            Email or Phone
+            Email
           </label>
           <Input
             name="email"
