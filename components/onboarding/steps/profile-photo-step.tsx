@@ -41,23 +41,46 @@ export default function ProfilePhotoStep({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
-      // Upload file to Supabase storage in the event-images bucket under profiles folder
+      // Upload file to Supabase storage in the avatars bucket
       const fileExt = file.name.split('.').pop();
-      const fileName = `profiles/${user.id}-${Date.now()}.${fileExt}`;
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      
+      // First, try to delete any existing avatar for this user to avoid storage clutter
+      const { data: existingFiles } = await supabase.storage
+        .from('avatars')
+        .list('', {
+          search: user.id
+        });
+        
+      if (existingFiles?.length) {
+        await Promise.all(
+          existingFiles.map(file => 
+            supabase.storage
+              .from('avatars')
+              .remove([file.name])
+          )
+        );
+      }
+
+      // Upload the new avatar
       const { error: uploadError, data } = await supabase.storage
-        .from('event-images')
-        .upload(fileName, file);
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
-        .from('event-images')
+        .from('avatars')
         .getPublicUrl(fileName);
 
       onChange(publicUrl);
       toast.success('Profile photo uploaded successfully!');
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast.error(error.message || 'Failed to upload photo');
     } finally {
       setIsUploading(false);
