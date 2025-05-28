@@ -1,17 +1,35 @@
-"use client"
-import { Input } from "@/components/ui/input"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, Send, Info, MessageSquare, CheckCircle, Loader2 } from "lucide-react"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { useState, useMemo, useEffect, useCallback, FormEvent, useRef } from 'react'
-import Image from 'next/image'
-import { useRouter } from 'next/navigation'
-import { useEventParticipation } from "@/hooks/use-event-participation"
-import { useEvent, type Participant as ParticipantType, type Event as EventType } from "@/hooks/use-event"
-import { useEventChat, type ChatMessage } from '@/hooks/use-event-chat'
-import { useAuth } from '@/context/SupabaseContext'
-import { ParticipantCard } from "@/components/participant-card"
+"use client";
+import { Input } from "@/components/ui/input";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  ChevronLeft,
+  Send,
+  Info,
+  MessageSquare,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  FormEvent,
+  useRef,
+} from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useEventParticipation } from "@/hooks/use-event-participation";
+import {
+  useEvent,
+  type Participant as ParticipantType,
+  type Event as EventType,
+} from "@/hooks/use-event";
+import { useEventChat, type ChatMessage } from "@/hooks/use-event-chat";
+import { useAuth } from "@/context/SupabaseContext";
+import { ParticipantCard } from "@/components/participant-card";
 
 // Music icons data
 type MusicIcon = {
@@ -42,82 +60,97 @@ const musicIcons: MusicIcon[] = [
 
 // Helper function to get emoji by name
 const getEmoji = (name: string, type: "instrument" | "genre") => {
-  const icon = musicIcons.find(icon => 
-    icon.name.toLowerCase() === name.toLowerCase() && icon.type === type
+  const icon = musicIcons.find(
+    (icon) =>
+      icon.name.toLowerCase() === name.toLowerCase() && icon.type === type
   );
   return icon ? icon.emoji : name;
 };
 
 interface EventScreenProps {
-  eventId: string
-  activeView: "chat" | "details"
-  setActiveView: (view: "chat" | "details") => void
-  onBack: () => void
+  eventId: string;
+  activeView: "chat" | "details";
+  setActiveView: (view: "chat" | "details") => void;
+  onBack: () => void;
 }
 
-export default function EventScreen({ eventId, activeView, setActiveView, onBack }: EventScreenProps) {
+export default function EventScreen({
+  eventId,
+  activeView,
+  setActiveView,
+  onBack,
+}: EventScreenProps) {
   const router = useRouter();
-  const isDesktop = useMediaQuery("(min-width: 1024px)")
-  const [activeTab, setActiveTab] = useState<"going" | "maybe">("going")
-  const { 
-    status: participationStatus, 
-    isLoading, 
-    handleGoing, 
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const [activeTab, setActiveTab] = useState<"going" | "maybe">("going");
+  const {
+    status: participationStatus,
+    isLoading,
+    handleGoing,
     handleMaybe,
-    participants 
-  } = useEventParticipation(eventId)
-  
+    participants,
+  } = useEventParticipation(eventId);
+
   // Fetch event data from the database
-  const { 
-    event: eventData, 
-    participants: dbParticipants, 
-    isLoading: isLoadingEvent, 
+  const {
+    event: eventData,
+    participants: dbParticipants,
+    isLoading: isLoadingEvent,
     error: eventError,
-    isNotFound
+    isNotFound,
   } = useEvent(eventId);
-  
+
   // Use participants from useEventParticipation hook
-  
+
   // Use event data directly
   const event = eventData;
-  
+
   // Log event data for debugging
   useEffect(() => {
-    console.log('Event data:', event);
-    console.log('Event image URL:', event?.image_url);
+    console.log("Event data:", event);
+    console.log("Event image URL:", event?.image_url);
   }, [event]);
-  
+
   // Use image from event data - using image_url to match the database schema
-  const eventImage = event?.image_url || '/placeholder-event.jpg';
+  const eventImage = event?.image_url || "/placeholder-event.jpg";
 
   // Format date and time
   const formattedDate = useMemo(() => {
-    if (!event?.start_time) return ''
-    const date = new Date(event.start_time)
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  }, [event?.start_time])
+    if (!event?.start_time) return "";
+    const date = new Date(event.start_time);
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  }, [event?.start_time]);
 
   const formattedTime = useMemo(() => {
-    if (!event?.start_time || !event?.end_time) return ''
+    if (!event?.start_time || !event?.end_time) return "";
     const formatTime = (dateString: string) => {
-      const date = new Date(dateString)
-      return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    }
-    return `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`
-  }, [event?.start_time, event?.end_time])
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+    return `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`;
+  }, [event?.start_time, event?.end_time]);
 
   // Use the event chat hook for real-time messaging
-  const { messages, isLoading: isLoadingMessages, error: messagesError, sendMessage } = useEventChat(eventId);
+  const {
+    messages,
+    isLoading: isLoadingMessages,
+    error: messagesError,
+    sendMessage,
+  } = useEventChat(eventId);
   const { user } = useAuth();
-  
+
   // State for the new message input
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  
+
   // Reference to the messages container for auto-scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -125,26 +158,26 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || isSending) return;
-    
+
     setIsSending(true);
     const result = await sendMessage(newMessage.trim());
     setIsSending(false);
-    
+
     if (result?.success) {
-      setNewMessage(''); // Clear input after sending
+      setNewMessage(""); // Clear input after sending
       // Scroll to bottom after sending a message
       scrollToBottom();
     } else if (result?.error) {
-      console.error('Failed to send message:', result.error);
+      console.error("Failed to send message:", result.error);
       // You could add a toast notification here for error feedback
     }
   };
-  
+
   // Function to scroll to the bottom of the messages
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-  
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0) {
@@ -157,41 +190,43 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-[#ffac6d]" />
       </div>
-    )
+    );
   }
 
   if (eventError) {
     const error = eventError as any;
-    console.error('Error fetching event:', {
+    console.error("Error fetching event:", {
       message: error.message,
       name: error.name,
       ...(error.code && { code: error.code }),
       ...(error.details && { details: error.details }),
       ...(error.hint && { hint: error.hint }),
     });
-    
+
     return (
       <div className="flex flex-col items-center justify-center h-screen p-4 text-center bg-gray-50">
         <div className="bg-white p-6 rounded-xl shadow-md max-w-md w-full space-y-4">
           <div className="text-5xl mb-4">😕</div>
           <h2 className="text-2xl font-bold text-gray-800">
-            {isNotFound ? 'Event Not Found' : 'Error Loading Event'}
+            {isNotFound ? "Event Not Found" : "Error Loading Event"}
           </h2>
           <p className="text-gray-600 mb-6">
-            {isNotFound 
+            {isNotFound
               ? "We couldn't find the event you're looking for. It may have been removed or the link might be incorrect."
-              : `We encountered an error while loading this event (${error.code || 'unknown error'}).`}
+              : `We encountered an error while loading this event (${
+                  error.code || "unknown error"
+                }).`}
           </p>
           <div className="flex flex-col space-y-2">
-            <Button 
+            <Button
               onClick={onBack}
               className="bg-[#ffac6d] hover:bg-[#fdc193] text-black w-full"
               size="lg"
             >
               Back to Events
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={() => window.location.reload()}
             >
@@ -200,7 +235,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!event || !dbParticipants) {
@@ -208,7 +243,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center p-6 bg-white rounded-xl shadow-md">
           <p className="text-gray-700 mb-4">No event data available</p>
-          <Button 
+          <Button
             onClick={onBack}
             variant="outline"
             className="border-[#ffac6d] text-[#ffac6d] hover:bg-[#fff5ee]"
@@ -217,7 +252,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   if (!event) {
@@ -225,7 +260,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center p-6 bg-white rounded-xl shadow-md">
           <p className="text-gray-700 mb-4">Event details not available</p>
-          <Button 
+          <Button
             onClick={onBack}
             variant="outline"
             className="border-[#ffac6d] text-[#ffac6d] hover:bg-[#fff5ee]"
@@ -234,51 +269,51 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           </Button>
         </div>
       </div>
-    )
+    );
   }
 
   const navigateToProfile = (userId: string, name: string) => {
     // Store the current event ID in session storage before navigating
-    if (typeof window !== 'undefined' && eventId) {
-      sessionStorage.setItem('referringEventId', eventId);
+    if (typeof window !== "undefined" && eventId) {
+      sessionStorage.setItem("referringEventId", eventId);
     }
-    
+
     // Navigate to user profile
     console.log(`Navigating to ${name}'s profile (${userId})`);
     // Navigate to the user's profile page
     router.push(`/profile/${userId}`);
-  }
-  
+  };
+
   // Handle participant click
   const handleParticipantClick = (participant: ParticipantType) => {
     if (participant?.id) {
-      const fullName = participant.full_name || 'User';
+      const fullName = participant.full_name || "User";
       navigateToProfile(participant.id, fullName);
     }
   };
-  
+
   // Handle going to event
   const handleGoingClick = async () => {
     try {
       await handleGoing();
     } catch (error) {
-      console.error('Error updating participation status:', error);
+      console.error("Error updating participation status:", error);
     }
   };
-  
+
   // Handle maybe going to event
   const handleMaybeClick = async () => {
     try {
       await handleMaybe();
     } catch (error) {
-      console.error('Error updating participation status:', error);
+      console.error("Error updating participation status:", error);
     }
   };
 
   // Event detail view component
   function EventDetailView() {
     if (!event) return null;
-    
+
     return (
       <div className="p-4 md:p-8 space-y-6">
         {/* Only show image container if there's an image */}
@@ -360,31 +395,41 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                   strokeLinejoin="round"
                 />
               </svg>
-              <span className="text-gray-700">{formattedDate} · {formattedTime}</span>
+              <span className="text-gray-700">
+                {formattedDate} · {formattedTime}
+              </span>
             </div>
           </div>
-          
+
           <div className="flex gap-2">
-            <Button 
+            <Button
               onClick={handleGoingClick}
               disabled={isLoading}
-              variant={participationStatus === 'going' ? 'default' : 'outline'}
-              className={`${participationStatus === 'going' ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' : ''}`}
+              variant={participationStatus === "going" ? "default" : "outline"}
+              className={`${
+                participationStatus === "going"
+                  ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                  : ""
+              }`}
             >
-              {participationStatus === 'going' ? (
+              {participationStatus === "going" ? (
                 <CheckCircle className="h-4 w-4 mr-1.5" />
               ) : (
                 <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
               )}
               I'm Going
             </Button>
-            <Button 
+            <Button
               onClick={handleMaybeClick}
               disabled={isLoading}
-              variant={participationStatus === 'maybe' ? 'default' : 'outline'}
-              className={`${participationStatus === 'maybe' ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' : ''}`}
+              variant={participationStatus === "maybe" ? "default" : "outline"}
+              className={`${
+                participationStatus === "maybe"
+                  ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                  : ""
+              }`}
             >
-              {participationStatus === 'maybe' ? (
+              {participationStatus === "maybe" ? (
                 <CheckCircle className="h-4 w-4 mr-1.5" />
               ) : (
                 <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
@@ -399,7 +444,8 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-medium text-lg">Participants</h2>
             <div className="text-base text-[#ffac6d]">
-              {participants.going.length} Going · {participants.maybe.length} Maybe
+              {participants.going.length} Going · {participants.maybe.length}{" "}
+              Maybe
             </div>
           </div>
 
@@ -440,110 +486,132 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                     <div className="flex items-center justify-between w-full gap-4">
                       <div className="flex items-center gap-2 flex-shrink-1">
                         <Avatar className="w-7 h-7 flex-shrink-0">
-                          <Image 
-                            src={participant.avatar_url || '/placeholder.svg'} 
-                            alt={participant.full_name || 'User'} 
-                            width={28} 
+                          <Image
+                            src={participant.avatar_url || "/placeholder.svg"}
+                            alt={participant.full_name || "User"}
+                            width={28}
                             height={28}
                             className="object-cover"
                           />
                         </Avatar>
                         <span className="font-medium text-sm">
-                          {participant.full_name || 'User'}
+                          {participant.full_name || "User"}
                           {participant.id === event?.creator_id && " (HOST)"}
                         </span>
                       </div>
                       <div className="flex gap-1">
-                        {participant.instruments && participant.instruments.length > 0 ? (
-                          participant.instruments.slice(0, 2).map(instrument => (
-                            <span 
-                              key={instrument} 
-                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
-                              title={instrument}
-                            >
-                              {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
-                            </span>
-                          ))
-                        ) : null}
-                        
-                        {participant.genres && participant.genres.length > 0 ? (
-                          participant.genres.slice(0, 1).map(genre => (
-                            <span 
-                              key={genre} 
-                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
-                              title={genre}
-                            >
-                              {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
-                            </span>
-                          ))
-                        ) : null}
+                        {participant.instruments &&
+                        participant.instruments.length > 0
+                          ? participant.instruments
+                              .slice(0, 2)
+                              .map((instrument) => (
+                                <span
+                                  key={instrument}
+                                  className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
+                                  title={instrument}
+                                >
+                                  {musicIcons.find(
+                                    (icon) =>
+                                      icon.id === instrument &&
+                                      icon.type === "instrument"
+                                  )?.emoji || "🎵"}
+                                </span>
+                              ))
+                          : null}
+
+                        {participant.genres && participant.genres.length > 0
+                          ? participant.genres.slice(0, 1).map((genre) => (
+                              <span
+                                key={genre}
+                                className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
+                                title={genre}
+                              >
+                                {musicIcons.find(
+                                  (icon) =>
+                                    icon.id === genre && icon.type === "genre"
+                                )?.emoji || "🎵"}
+                              </span>
+                            ))
+                          : null}
                       </div>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-gray-500 text-sm col-span-full">No one is going yet</div>
+                <div className="text-gray-500 text-sm col-span-full">
+                  No one is going yet
+                </div>
               )
+            ) : participants.maybe.length > 0 ? (
+              participants.maybe.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
+                  onClick={() => handleParticipantClick(participant)}
+                >
+                  <div className="flex items-center justify-between w-full gap-4">
+                    <div className="flex items-center gap-2 flex-shrink-1">
+                      <Avatar className="w-7 h-7 flex-shrink-0">
+                        <Image
+                          src={participant.avatar_url || "/placeholder.svg"}
+                          alt={participant.full_name || "User"}
+                          width={28}
+                          height={28}
+                          className="object-cover"
+                        />
+                      </Avatar>
+                      <span className="font-medium text-sm">
+                        {participant.full_name || "User"}
+                        {participant.id === event?.creator_id && " (HOST)"}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      {participant.instruments &&
+                      participant.instruments.length > 0
+                        ? participant.instruments
+                            .slice(0, 2)
+                            .map((instrument) => (
+                              <span
+                                key={instrument}
+                                className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
+                                title={instrument}
+                              >
+                                {musicIcons.find(
+                                  (icon) =>
+                                    icon.id === instrument &&
+                                    icon.type === "instrument"
+                                )?.emoji || "🎵"}
+                              </span>
+                            ))
+                        : null}
+
+                      {participant.genres && participant.genres.length > 0
+                        ? participant.genres.slice(0, 1).map((genre) => (
+                            <span
+                              key={genre}
+                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
+                              title={genre}
+                            >
+                              {musicIcons.find(
+                                (icon) =>
+                                  icon.id === genre && icon.type === "genre"
+                              )?.emoji || "🎵"}
+                            </span>
+                          ))
+                        : null}
+                    </div>
+                  </div>
+                </div>
+              ))
             ) : (
-              participants.maybe.length > 0 ? (
-                participants.maybe.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
-                    onClick={() => handleParticipantClick(participant)}
-                  >
-                    <div className="flex items-center justify-between w-full gap-4">
-                      <div className="flex items-center gap-2 flex-shrink-1">
-                        <Avatar className="w-7 h-7 flex-shrink-0">
-                          <Image 
-                            src={participant.avatar_url || '/placeholder.svg'} 
-                            alt={participant.full_name || 'User'} 
-                            width={28} 
-                            height={28}
-                            className="object-cover"
-                          />
-                        </Avatar>
-                        <span className="font-medium text-sm">
-                          {participant.full_name || 'User'}
-                          {participant.id === event?.creator_id && " (HOST)"}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        {participant.instruments && participant.instruments.length > 0 ? (
-                          participant.instruments.slice(0, 2).map(instrument => (
-                            <span 
-                              key={instrument} 
-                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
-                              title={instrument}
-                            >
-                              {musicIcons.find(icon => icon.id === instrument && icon.type === 'instrument')?.emoji || '🎵'}
-                            </span>
-                          ))
-                        ) : null}
-                        
-                        {participant.genres && participant.genres.length > 0 ? (
-                          participant.genres.slice(0, 1).map(genre => (
-                            <span 
-                              key={genre} 
-                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" 
-                              title={genre}
-                            >
-                              {musicIcons.find(icon => icon.id === genre && icon.type === 'genre')?.emoji || '🎵'}
-                            </span>
-                          ))
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-gray-500 text-sm col-span-full">No maybes yet</div>
-              )
+              <div className="text-gray-500 text-sm col-span-full">
+                No maybes yet
+              </div>
             )}
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -554,11 +622,11 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
         </button>
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <Image 
-              src={event.image || '/placeholder.svg'} 
-              alt="Event" 
-              width={32} 
-              height={32} 
+            <Image
+              src={event.image || "/placeholder.svg"}
+              alt="Event"
+              width={32}
+              height={32}
               className="object-cover"
             />
           </Avatar>
@@ -571,7 +639,11 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                 variant={activeView === "chat" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveView("chat")}
-                className={activeView === "chat" ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]" : ""}
+                className={
+                  activeView === "chat"
+                    ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]"
+                    : ""
+                }
               >
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Chat
@@ -580,7 +652,11 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                 variant={activeView === "details" ? "default" : "outline"}
                 size="sm"
                 onClick={() => setActiveView("details")}
-                className={activeView === "details" ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]" : ""}
+                className={
+                  activeView === "details"
+                    ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]"
+                    : ""
+                }
               >
                 <Info className="h-4 w-4 mr-1" />
                 Details
@@ -589,28 +665,36 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
           ) : (
             <button
               className="p-2 hover:bg-gray-100 rounded-full"
-              onClick={() => setActiveView(activeView === "chat" ? "details" : "chat")}
+              onClick={() =>
+                setActiveView(activeView === "chat" ? "details" : "chat")
+              }
             >
-              {activeView === "chat" ? <Info className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
+              {activeView === "chat" ? (
+                <Info className="h-5 w-5" />
+              ) : (
+                <MessageSquare className="h-5 w-5" />
+              )}
             </button>
           )}
         </div>
       </header>
 
-      {activeView === 'details' ? (
+      {activeView === "details" ? (
         <div className="flex-1 overflow-y-auto pb-[56px] lg:pb-0">
           <EventDetailView />
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden relative">
-          <div className="absolute inset-0 overflow-y-auto pb-[120px] md:pb-[80px]">
-            <div className="p-4 md:p-6 space-y-4">
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto pl-0 pr-0">
+            <div className="p-4 md:p-6 space-y-4 pb-[120px] lg:pb-[80px] lg:pr-0">
               {isLoadingMessages ? (
                 <div className="flex justify-center my-4">
                   <Loader2 className="h-6 w-6 animate-spin text-[#ffac6d]" />
                 </div>
               ) : messagesError ? (
-                <div className="text-center text-red-500 my-4">Error loading messages</div>
+                <div className="text-center text-red-500 my-4">
+                  Error loading messages
+                </div>
               ) : messages.length === 0 ? (
                 <div className="text-center text-gray-500 my-4">
                   No messages yet. Be the first to say hello!
@@ -620,45 +704,76 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
                   {messages.map((message) => {
                     const isCurrentUser = message.user_id === user?.id;
                     const messageDate = new Date(message.created_at);
-                    const messageTime = messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                    
+                    const messageTime = messageDate.toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    });
+
                     return (
-                      <div key={message.id} className={`flex items-start ${isCurrentUser ? "justify-end gap-2" : "gap-2"}`}>
+                      <div
+                        key={message.id}
+                        className={`flex items-start ${
+                          isCurrentUser ? "justify-end gap-2" : "gap-2"
+                        }`}
+                      >
                         {!isCurrentUser ? (
                           <Avatar className="w-8 h-8">
-                            <Image 
-                              src={message.user?.avatar_url || '/placeholder.svg'} 
-                              alt={message.user?.full_name || 'User'} 
-                              width={32} 
-                              height={32} 
+                            <Image
+                              src={
+                                message.user?.avatar_url || "/placeholder.svg"
+                              }
+                              alt={message.user?.full_name || "User"}
+                              width={32}
+                              height={32}
                               className="object-cover"
                             />
                           </Avatar>
                         ) : (
                           <Avatar className="w-8 h-8 order-1">
-                            <Image 
-                              src={user?.user_metadata?.avatar_url || '/placeholder.svg'} 
-                              alt="You" 
-                              width={32} 
-                              height={32} 
+                            <Image
+                              src={
+                                user?.user_metadata?.avatar_url ||
+                                "/placeholder.svg"
+                              }
+                              alt="You"
+                              width={32}
+                              height={32}
                               className="object-cover"
                             />
                           </Avatar>
                         )}
-                        <div className={`${isCurrentUser ? 'w-full flex flex-col items-end' : ''}`}>
+                        <div
+                          className={`${
+                            isCurrentUser
+                              ? "w-full flex flex-col items-end"
+                              : ""
+                          }`}
+                        >
                           {!isCurrentUser ? (
                             <div className="flex items-center gap-2">
-                              <div className="text-xs font-medium">{message.user?.full_name || 'User'}</div>
-                              <div className="text-xs text-gray-500">{messageTime}</div>
+                              <div className="text-xs font-medium">
+                                {message.user?.full_name || "User"}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {messageTime}
+                              </div>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-2">
-                              <div className="text-xs text-gray-500">{messageTime}</div>
+                              <div className="text-xs text-gray-500">
+                                {messageTime}
+                              </div>
                               <div className="text-xs font-medium">You</div>
                             </div>
                           )}
-                          <div className={`${isCurrentUser ? "bg-[#ffd2b0]" : "bg-gray-100"} rounded-lg p-2 mt-1 inline-block max-w-xs`}>
-                            <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                          <div
+                            className={`${
+                              isCurrentUser ? "bg-[#ffd2b0]" : "bg-gray-100"
+                            } rounded-lg p-2 mt-1 inline-block max-w-xs`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">
+                              {message.text}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -676,32 +791,40 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
               <div className="p-4 border-b">
                 <h2 className="font-medium mb-2">Your Status</h2>
                 <div className="flex flex-col gap-2 mb-4">
-                  <Button 
+                  <Button
                     onClick={handleGoing}
                     disabled={isLoading}
                     size="sm"
-                    variant={participationStatus === 'going' ? 'default' : 'outline'}
-                    className={`w-full justify-start ${participationStatus === 'going' 
-                      ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' 
-                      : 'hover:bg-gray-50'}`}
+                    variant={
+                      participationStatus === "going" ? "default" : "outline"
+                    }
+                    className={`w-full justify-start ${
+                      participationStatus === "going"
+                        ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                        : "hover:bg-gray-50"
+                    }`}
                   >
-                    {participationStatus === 'going' ? (
+                    {participationStatus === "going" ? (
                       <CheckCircle className="h-4 w-4 mr-2" />
                     ) : (
                       <div className="w-4 h-4 rounded-full border border-gray-300 mr-2" />
                     )}
                     I'm Going
                   </Button>
-                  <Button 
+                  <Button
                     onClick={handleMaybe}
                     disabled={isLoading}
                     size="sm"
-                    variant={participationStatus === 'maybe' ? 'default' : 'outline'}
-                    className={`w-full justify-start ${participationStatus === 'maybe' 
-                      ? 'bg-[#ffac6d] hover:bg-[#fdc193] text-black' 
-                      : 'hover:bg-gray-50'}`}
+                    variant={
+                      participationStatus === "maybe" ? "default" : "outline"
+                    }
+                    className={`w-full justify-start ${
+                      participationStatus === "maybe"
+                        ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                        : "hover:bg-gray-50"
+                    }`}
                   >
-                    {participationStatus === 'maybe' ? (
+                    {participationStatus === "maybe" ? (
                       <CheckCircle className="h-4 w-4 mr-2" />
                     ) : (
                       <div className="w-4 h-4 rounded-full border border-gray-300 mr-2" />
@@ -737,23 +860,26 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
 
                 <div className="space-y-1 mt-2">
                   {activeTab === "going"
-                    ? participants.going.slice(0, 8).map((participant) => (
-                        <ParticipantCard
-                          key={`going-${participant.id}`}
-                          participant={participant}
-                          isHost={participant.id === event?.creator_id}
-                          onClick={() => handleParticipantClick(participant)}
-                        />
-                      ))
-                    : participants.maybe.slice(0, 8).map((participant) => (
-                        <ParticipantCard
-                          key={`maybe-${participant.id}`}
-                          participant={participant}
-                          isHost={participant.id === event?.creator_id}
-                          onClick={() => handleParticipantClick(participant)}
-                        />
-                      ))
-                  }
+                    ? participants.going
+                        .slice(0, 8)
+                        .map((participant) => (
+                          <ParticipantCard
+                            key={`going-${participant.id}`}
+                            participant={participant}
+                            isHost={participant.id === event?.creator_id}
+                            onClick={() => handleParticipantClick(participant)}
+                          />
+                        ))
+                    : participants.maybe
+                        .slice(0, 8)
+                        .map((participant) => (
+                          <ParticipantCard
+                            key={`maybe-${participant.id}`}
+                            participant={participant}
+                            isHost={participant.id === event?.creator_id}
+                            onClick={() => handleParticipantClick(participant)}
+                          />
+                        ))}
                 </div>
               </div>
             </div>
@@ -761,20 +887,23 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
         </div>
       )}
 
-      {activeView === 'chat' && (
-        <div className="border-t p-3 absolute bottom-0 left-0 right-0 bg-white pb-[calc(0.75rem+56px)] lg:pb-3 z-10">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-            <Input 
-              placeholder="Type your message..." 
-              className="flex-1" 
+      {activeView === "chat" && (
+        <div className="border-t px-4 md:px-6 py-3 fixed bottom-[56px] left-0 right-0 lg:bottom-0 lg:left-[288px] lg:right-64 bg-white z-10 shadow-sm">
+          <form
+            onSubmit={handleSendMessage}
+            className="flex items-center gap-2 max-w-full"
+          >
+            <Input
+              placeholder="Type your message..."
+              className="flex-1"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               disabled={isSending}
             />
-            <Button 
-              type="submit" 
-              size="icon" 
-              className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+            <Button
+              type="submit"
+              size="icon"
+              className="bg-[#ffac6d] hover:bg-[#fdc193] text-black flex-shrink-0"
               disabled={!newMessage.trim() || isSending}
             >
               {isSending ? (
