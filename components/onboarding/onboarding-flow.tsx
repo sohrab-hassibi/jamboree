@@ -131,23 +131,25 @@ export default function OnboardingFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-4 md:p-6">
-      <div className="w-full max-w-md mx-auto">
-        <div className="mb-6 md:mb-8 flex justify-center">
-          <div className="flex space-x-2">
-            {STEPS.map((step, index) => (
-              <div
-                key={step}
-                className={`h-1.5 md:h-2 w-6 md:w-8 rounded-full ${
-                  STEPS.indexOf(currentStep) >= index
-                    ? "bg-[#ffac6d]"
-                    : "bg-gray-200"
-                }`}
-              />
-            ))}
+    <div className="fixed inset-0 bg-white">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6">
+        <div className="w-full max-w-2xl mx-auto">
+          <div className="mb-6 md:mb-8 flex justify-center">
+            <div className="flex space-x-2">
+              {STEPS.map((step, index) => (
+                <div
+                  key={step}
+                  className={`h-1.5 md:h-2 w-6 md:w-8 rounded-full ${
+                    STEPS.indexOf(currentStep) >= index
+                      ? "bg-[#ffac6d]"
+                      : "bg-gray-200"
+                  }`}
+                />
+              ))}
+            </div>
           </div>
+          {renderStep()}
         </div>
-        {renderStep()}
       </div>
     </div>
   );
