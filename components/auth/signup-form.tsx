@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/SupabaseContext"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase";
+import OnboardingFlow from "@/components/onboarding/onboarding-flow";
 
 export default function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [email, setEmail] = useState('');
   const [formData, setFormData] = useState({
     email: "",
@@ -126,7 +127,8 @@ export default function SignupForm() {
       }
       
       toast.success("Account created successfully!");
-      router.push("/");
+      // Instead of redirecting, show the onboarding flow
+      setShowOnboarding(true);
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
     } finally {
@@ -134,50 +136,9 @@ export default function SignupForm() {
     }
   };
 
-  // Show confirmation message if needed
-  if (showConfirmation) {
-    return (
-      <div className="w-full max-w-md mx-auto p-6 bg-white rounded-lg shadow-sm text-center">
-        <h1 className="text-2xl font-bold mb-4">Check your email</h1>
-        <p className="mb-6">
-          We've sent a confirmation link to <span className="font-medium">{email}</span>.
-          Please check your inbox and click the link to verify your email address.
-        </p>
-        <p className="text-sm text-gray-600 mb-6">
-          After verifying your email, you'll be taken through a quick setup process to customize your profile.
-        </p>
-        <div className="space-y-3">
-          <Button
-            onClick={() => router.push('/login')}
-            className="w-full bg-[#ffac6d] hover:bg-[#fdc193] text-black"
-          >
-            Back to Login
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              setIsLoading(true);
-              try {
-                const { error } = await supabase.auth.resend({
-                  type: 'signup',
-                  email: email,
-                });
-                if (error) throw error;
-                toast.success('Confirmation email resent!');
-              } catch (error: any) {
-                toast.error(error.message || 'Failed to resend email');
-              } finally {
-                setIsLoading(false);
-              }
-            }}
-            className="w-full"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Sending...' : 'Resend Confirmation'}
-          </Button>
-        </div>
-      </div>
-    );
+  // If onboarding should be shown, render the onboarding flow
+  if (showOnboarding) {
+    return <OnboardingFlow />;
   }
 
   return (

@@ -45,6 +45,9 @@ export function ParticipantCard({
   isHost: boolean;
   onClick: () => void;
 }) {
+  const hasInstruments = participant.instruments && participant.instruments.length > 0;
+  const hasGenres = participant.genres && participant.genres.length > 0;
+
   return (
     <div
       className="flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
@@ -66,9 +69,9 @@ export function ParticipantCard({
         </div>
       </div>
       
-      {(participant.instruments?.length || participant.genres?.length) && (
+      {(hasInstruments || hasGenres) && (
         <div className="flex flex-shrink-0 gap-1.5">
-          {participant.instruments?.slice(0, 2).map(instrument => {
+          {hasInstruments && participant.instruments?.slice(0, 2).map(instrument => {
             const emoji = getEmoji(instrument, 'instrument');
             return (
               <span 
@@ -80,7 +83,7 @@ export function ParticipantCard({
               </span>
             );
           })}
-          {participant.genres?.slice(0, 2).map(genre => {
+          {hasGenres && participant.genres?.slice(0, 1).map(genre => {
             const emoji = getEmoji(genre, 'genre');
             return (
               <span 
