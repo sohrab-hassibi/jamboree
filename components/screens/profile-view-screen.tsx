@@ -145,20 +145,19 @@ function UpcomingEvents({ userId }: { userId: string }) {
   
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Upcoming Events</h3>
-      
+      <h3 className="text-xl md:text-2xl font-bold">Upcoming Events 🎵</h3>
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
         </div>
       ) : error ? (
         <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
+          <p className="text-sm text-red-500">Error loading events</p>
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No upcoming events</p>
+          <p className="text-lg text-gray-500">No upcoming events... Check out the Events Page!</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -168,7 +167,7 @@ function UpcomingEvents({ userId }: { userId: string }) {
               return (
                 <div
                   key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow"
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[320px] cursor-pointer hover:shadow-md transition-shadow"
                   onClick={() => handleEventClick(event.id)}
                 >
                   {/* Event image with participation indicator */}
@@ -178,18 +177,22 @@ function UpcomingEvents({ userId }: { userId: string }) {
                       alt={event.title}
                       width={200}
                       height={100}
-                      className="w-full h-24 object-cover"
+                      className="w-full h-32 object-cover"
                     />
                     {/* Participation status indicator */}
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                    <span
+                      className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                        event.participationStatus === 'going'
+                          ? 'text-green-700 bg-green-100'
+                          : 'text-yellow-700 bg-yellow-100'
                       }`}
-                    />
+                    >
+                      {event.participationStatus === 'going' ? 'Going ✅' : 'Maybe 🤔'}
+                    </span>
                   </div>
                   <div className="p-2">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
+                    <div className="font-bold text-lg">{event.title}</div>
+                    <div className="text-base text-gray-500">{dateStr}</div>
                   </div>
                 </div>
               );
@@ -315,20 +318,20 @@ function PostGamesEvents({ userId }: { userId: string }) {
   
   return (
     <div className="space-y-3 mt-6">
-      <h3 className="font-medium">Post Games 👀</h3>
+      <h3 className="text-xl md:text-2xl font-bold">Post Games 👀</h3>
       
       {isLoading ? (
         <div className="text-center py-4">
           <div className="animate-spin h-6 w-6 border-4 border-[#ffac6d] border-t-transparent rounded-full mx-auto"></div>
-          <p className="text-xs text-gray-500 mt-2">Loading...</p>
+          <p className="text-sm text-gray-500 mt-2">Loading...</p>
         </div>
       ) : error ? (
         <div className="text-center py-4">
-          <p className="text-xs text-red-500">Error loading events</p>
+          <p className="text-sm text-red-500">Error loading events</p>
         </div>
       ) : events.length === 0 ? (
         <div className="text-center py-4">
-          <p className="text-sm text-gray-500">No past events</p>
+          <p className="text-lg text-gray-500">No past events... Events that they have attended will show up here!</p>
         </div>
       ) : (
         <div className="overflow-x-auto pb-2 hide-scrollbar">
@@ -338,7 +341,7 @@ function PostGamesEvents({ userId }: { userId: string }) {
               return (
                 <div
                   key={event.id}
-                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[200px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
+                  className="rounded-lg overflow-hidden border flex-shrink-0 w-[320px] cursor-pointer hover:shadow-md transition-shadow opacity-80"
                   onClick={() => handleEventClick(event.id)}
                 >
                   {/* Event image with participation indicator */}
@@ -348,18 +351,22 @@ function PostGamesEvents({ userId }: { userId: string }) {
                       alt={event.title}
                       width={200}
                       height={100}
-                      className="w-full h-24 object-cover"
+                      className="w-full h-32 object-cover"
                     />
                     {/* Participation status indicator */}
-                    <div 
-                      className={`absolute top-2 right-2 w-3 h-3 rounded-full ${
-                        event.participationStatus === 'going' ? 'bg-green-400' : 'bg-yellow-400'
+                    <span
+                      className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
+                        event.participationStatus === 'going'
+                          ? 'text-green-700 bg-green-100'
+                          : 'text-yellow-700 bg-yellow-100'
                       }`}
-                    />
+                    >
+                      {event.participationStatus === 'going' ? 'Attended ✅' : 'Was Interested 🤔'}
+                  </span>
                   </div>
                   <div className="p-2">
                     <div className="font-medium text-sm">{event.title}</div>
-                    <div className="text-xs text-gray-500">{dateStr}</div>
+                    <div className="text-base text-gray-500">{dateStr}</div>
                   </div>
                 </div>
               );
@@ -499,6 +506,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
   }
 
   return (
+    // background + back button
     <div className="min-h-screen bg-white lg:min-h-0 lg:h-screen flex flex-col">
       <div className="p-4 md:p-6 border-b flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold">Profile</h1>
@@ -511,76 +519,64 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
         </Button>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6">
-          <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <div className="relative rounded-full overflow-hidden border-4 border-[#ffac6d] w-32 h-32">
-                  <Image
-                    src={profileData?.avatar_url || "/placeholder.svg?height=128&width=128"}
-                    alt={profileData?.full_name || "Profile"}
-                    width={128}
-                    height={128}
-                    className="object-cover"
-                  />
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Left column: Avatar & icons */}
+              <div className="flex flex-col items-center w-full md:w-auto md:min-w-[320px]">
+                <div className="relative w-80 h-80 mb-2">
+                  {/* Avatar centered */}
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full overflow-hidden border-4 border-[#ffac6d] w-40 h-40 flex justify-center items-center bg-gray-100">
+                    <Image
+                      src={profileData.avatar_url || "/placeholder.svg?height=160&width=160"}
+                      alt={profileData.full_name || "Profile"}
+                      width={160}
+                      height={160}
+                      className="object-cover"
+                    />
+                  </div>
+                  {/* Icons absolutely positioned in this larger container */}
+                  {[...(profileData.instruments || []), ...(profileData.genres || [])].map((iconId, index, arr) => {
+                    const icon = musicIcons.find((i) => i.id === iconId);
+                    if (!icon) return null;
+                    const total = arr.length;
+                    const baseRadius = 120;
+                    const center = 160;
+                    const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
+                    const x = center + baseRadius * Math.cos(angle);
+                    const y = center + baseRadius * Math.sin(angle);
+                    return (
+                      <div
+                        key={icon.id}
+                        className="absolute bg-[#ffac6d] rounded-full w-14 h-14 flex items-center justify-center shadow-sm"
+                        style={{
+                          left: `${x}px`,
+                          top: `${y}px`,
+                          fontSize: "32px",
+                          transform: "translate(-50%, -50%)",
+                          zIndex: 10,
+                        }}
+                      >
+                        {icon.emoji}
+                      </div>
+                    );
+                  })}
                 </div>
-
-                {/* Music icons around profile picture */}
-                {profileData?.instruments?.concat(profileData?.genres || []).map((iconId, index) => {
-                  const icon = musicIcons.find((i) => i.id === iconId);
-                  if (!icon) return null;
-
-                  // Calculate position in a circle above the profile picture
-                  const totalIcons = (profileData?.instruments?.length || 0) + (profileData?.genres?.length || 0);
-                  const angle = (index / totalIcons) * Math.PI - Math.PI / 2; // Start from top (-π/2) and go 180 degrees (π)
-
-                  // Profile picture is 32px wide (radius 16px)
-                  // But we need to account for the orange border (border-4 = 4px)
-                  const profileRadius = 16;
-                  const borderWidth = 4;
-                  const totalProfileRadius = profileRadius + borderWidth;
-
-                  // Ensure icons are outside the orange border
-                  // Use the total radius (including border) as the base
-                  const iconPlacementRadius = totalProfileRadius * 1.25;
-
-                  // Calculate x and y coordinates
-                  const x = Math.cos(angle) * iconPlacementRadius;
-                  const y = Math.sin(angle) * iconPlacementRadius;
-
-                  return (
-                    <div
-                      key={icon.id}
-                      className="absolute bg-[#ffac6d] rounded-full w-10 h-10 flex items-center justify-center shadow-sm"
-                      style={{
-                        left: "50%",
-                        top: "50%",
-                        transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))`,
-                        fontSize: "20px",
-                        zIndex: 10,
-                      }}
-                    >
-                      {icon.emoji}
-                    </div>
-                  );
-                })}
               </div>
 
-              <h2 className="text-xl font-bold mt-4">{profileData?.full_name}</h2>
-            </div>
-
-            <div className="flex-1 w-full">
+            {/* Right: Name, Bio, Instruments, Genres */}
+            <div className="flex-1 w-full mt-8 md:mt-0">
               <div className="space-y-4">
+                {/* Name */}
+                <h2 className="text-3xl font-bold">{profileData?.full_name}</h2>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Bio:</label>
-                  <p className="text-sm bg-gray-50 p-3 rounded-lg">
+                  <label className="block text-lg font-medium mb-1">Bio:</label>
+                  <p className="text-base bg-gray-50 p-3 rounded-lg">
                     {profileData?.bio || "No bio available"}
                   </p>
                 </div>
-
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Instruments:</h3>
+                  <h3 className="text-lg font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.instruments?.map((instrument) => {
                       const icon = musicIcons.find((i) => i.id === instrument);
@@ -590,18 +586,17 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                           className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
                         >
                           <span className="mr-2">{icon?.emoji || '🎸'}</span>
-                          <span className="text-sm">{icon?.name || instrument}</span>
+                          <span className="text-base">{icon?.name || instrument}</span>
                         </div>
                       );
                     })}
                     {!profileData?.instruments?.length && (
-                      <span className="text-sm text-gray-500 italic">No instruments selected</span>
+                      <span className="text-base text-gray-500 italic">No instruments selected</span>
                     )}
                   </div>
                 </div>
-
                 <div className="space-y-3">
-                  <h3 className="text-sm font-medium">Genres:</h3>
+                  <h3 className="text-lg font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.genres?.map((genre) => {
                       const icon = musicIcons.find((i) => i.id === genre);
@@ -611,12 +606,12 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                           className="bg-[#ffd2b0] rounded-full px-3 py-1.5 flex items-center"
                         >
                           <span className="mr-2">{icon?.emoji || '🎵'}</span>
-                          <span className="text-sm">{icon?.name || genre}</span>
+                          <span className="text-base">{icon?.name || genre}</span>
                         </div>
                       );
                     })}
                     {!profileData?.genres?.length && (
-                      <span className="text-sm text-gray-500 italic">No genres selected</span>
+                      <span className="text-base text-gray-500 italic">No genres selected</span>
                     )}
                   </div>
                 </div>

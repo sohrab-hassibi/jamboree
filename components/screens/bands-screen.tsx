@@ -70,7 +70,8 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
     <div className="flex h-full w-full flex-col overflow-hidden bg-background lg:flex-row">
       {!selectedBand || !isDesktop ? (
         <div className="flex h-full w-full flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b p-4 md:p-6">
+          {/* UPDATED: Sticky header */}
+          <div className="sticky top-0 z-10 bg-white flex items-center justify-between border-b p-4 md:p-6 shadow-sm">
             <h1 className="text-xl md:text-2xl font-bold">Bands</h1>
             <Button
               className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
@@ -80,6 +81,8 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
               Create Band
             </Button>
           </div>
+          
+          {/* Scrollable content area */}
           <div className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex h-full items-center justify-center">
@@ -137,15 +140,6 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
         </div>
       ) : (
         <BandChatScreen bandId={selectedBand} onBack={handleBackToBands} />
-      )}
-
-      {!isDesktop && selectedBand === null && (
-        <div className="p-4 border-t">
-          <Button className="w-full bg-[#ffac6d] hover:bg-[#fdc193] text-black" onClick={onCreateBand}>
-            <PlusCircle className="h-4 w-4 mr-2" />
-            Create New Band
-          </Button>
-        </div>
       )}
 
       <div className="h-16 lg:hidden">{/* Spacer for mobile nav */}</div>

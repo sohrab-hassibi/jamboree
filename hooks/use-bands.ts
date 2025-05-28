@@ -56,7 +56,7 @@ export function useBands() {
         // Get user details for the message sender
         const message = data[0];
         const { data: userData, error: userError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('id, full_name')
           .eq('id', message.user_id)
           .single();
