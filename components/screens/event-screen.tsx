@@ -598,7 +598,7 @@ export default function EventScreen({ eventId, activeView, setActiveView, onBack
       </header>
 
       {activeView === 'details' ? (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto pb-[56px] lg:pb-0">
           <EventDetailView />
         </div>
       ) : (
