@@ -16,6 +16,13 @@ import { useBandMembers, type BandMember } from "@/hooks/use-band-members"
 import { useAuth } from "@/context/SupabaseContext"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
 
 interface BandChatScreenProps {
   bandId?: string
@@ -27,6 +34,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
   const isDesktop = useMediaQuery("(min-width: 1024px)")
   const [messageText, setMessageText] = useState("")
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [showInfoSheet, setShowInfoSheet] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   
@@ -392,19 +400,97 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
         </button>
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
-            <Image src="/placeholder.svg?height=32&width=32" alt={band.name} width={32} height={32} />
+            <Image
+              src={(band as any)?.image_url || "/placeholder.svg"}
+              alt={band.name}
+              width={32}
+              height={32}
+            />
           </Avatar>
           <h1 className="text-lg font-medium">{band.name}</h1>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto lg:hidden">
           <button 
-            onClick={() => handleLeaveBand()}
-            className="text-sm text-red-500 hover:text-red-700 font-medium px-3 py-1 rounded-md border border-red-500 hover:bg-red-50 transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full"
+            onClick={() => setShowInfoSheet(true)}
           >
-            Leave Band
+            <Info className="h-5 w-5" />
           </button>
         </div>
       </header>
+
+      {/* Band Info Sheet - Only shown on mobile */}
+      {!isDesktop && (
+        <Sheet open={showInfoSheet} onOpenChange={setShowInfoSheet}>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Band Information</SheetTitle>
+            </SheetHeader>
+            <div className="mt-6 space-y-6">
+              <div>
+                <h3 className="font-medium mb-3">Members ({directMembers.length})</h3>
+                <div className="space-y-3">
+                  {directLoading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#ffac6d]" />
+                    </div>
+                  ) : directMembers.length === 0 ? (
+                    <div className="text-center">
+                      <p className="text-sm text-muted-foreground">No members yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {directMembers.map((member) => {
+                        const userData = member.user;
+                        const fullName = userData?.full_name || "Unknown member";
+                        const avatarUrl = userData?.avatar_url || "/placeholder.svg";
+                        
+                        return (
+                          <div 
+                            key={member.id} 
+                            className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
+                            onClick={() => handleMemberClick(member)}
+                          >
+                            <Avatar className="w-8 h-8">
+                              <Image 
+                                src={avatarUrl} 
+                                alt={fullName} 
+                                width={32} 
+                                height={32}
+                                className="object-cover"
+                              />
+                            </Avatar>
+                            <div className="overflow-hidden">
+                              <span className="text-sm font-medium truncate block">
+                                {fullName}
+                              </span>
+                              {member.role === 'creator' && (
+                                <span className="text-xs text-[#ffac6d]">Creator</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {user && (
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleLeaveBand}
+                  >
+                    Leave Band
+                  </Button>
+                </div>
+              )}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       <div className="flex flex-1 overflow-hidden w-full">
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
