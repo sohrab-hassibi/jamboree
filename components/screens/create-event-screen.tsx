@@ -334,7 +334,7 @@ export default function CreateEventScreen({
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="Description"
+                  placeholder="Describe your event and the norms you want to set for participants, both on and offline!"
                   className="pl-10 min-h-[120px]"
                   disabled={isLoading}
                 />
