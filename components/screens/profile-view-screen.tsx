@@ -389,6 +389,16 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+  }, []);
   
   // Function to handle back button click
   const handleBackClick = () => {
@@ -396,8 +406,14 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
     const referringEventId = sessionStorage.getItem('referringEventId');
     
     if (referringEventId) {
-      // Navigate back to the specific event
-      router.push(`/?event=${referringEventId}`);
+      // If user is authenticated, navigate back to the specific event
+      if (isAuthenticated) {
+        router.push(`/?event=${referringEventId}`);
+      } else {
+        // If not authenticated, store the event ID and redirect to login
+        sessionStorage.setItem('redirectAfterLogin', `/?event=${referringEventId}`);
+        router.push('/login');
+      }
       // Clear the stored event ID
       sessionStorage.removeItem('referringEventId');
     } else {

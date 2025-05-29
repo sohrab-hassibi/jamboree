@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,15 @@ export default function LoginForm() {
     password: "",
   });
   const router = useRouter();
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
+
+  // Check for redirect path in session storage
+  useEffect(() => {
+    const path = sessionStorage.getItem('redirectAfterLogin');
+    if (path) {
+      setRedirectPath(path);
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,7 +58,16 @@ export default function LoginForm() {
       if (error) throw error;
       
       toast.success("Logged in successfully!");
-      router.push("/");
+
+      // Clear the redirect path from session storage
+      sessionStorage.removeItem('redirectAfterLogin');
+
+      // Navigate to the redirect path if it exists, otherwise go to home
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else {
+        router.push("/");
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to log in");
     } finally {

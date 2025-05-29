@@ -97,10 +97,21 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
               </div>
             ) : bands.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                <p className="text-muted-foreground">You don't have any bands yet</p>
-                <Button variant="outline" size="sm" className="mt-2" onClick={onCreateBand}>
-                  Create a band
-                </Button>
+                <div className="max-w-sm space-y-4">
+                  <div className="text-4xl mb-2">🎸</div>
+                  <h2 className="text-xl font-bold">No Bands Yet</h2>
+                  <p className="text-muted-foreground">
+                    Create a band to start casually chatting or collaborating with other musicians! You can invite members, 
+                    chat about upcoming gigs, coordinate practice sessions, or just shoot the shit.
+                  </p>
+                  <Button 
+                    onClick={onCreateBand}
+                    className="bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                  >
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Create Your First Band
+                  </Button>
+                </div>
               </div>
             ) : (
               bands.map((band) => (

@@ -9,6 +9,8 @@ import {
   MessageSquare,
   CheckCircle,
   Loader2,
+  MapPin,
+  Calendar,
 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import {
@@ -30,6 +32,9 @@ import {
 import { useEventChat, type ChatMessage } from "@/hooks/use-event-chat";
 import { useAuth } from "@/context/SupabaseContext";
 import { ParticipantCard } from "@/components/participant-card";
+import { supabase } from "@/lib/supabase";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 // Music icons data
 type MusicIcon = {
@@ -82,7 +87,11 @@ export default function EventScreen({
 }: EventScreenProps) {
   const router = useRouter();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const [activeTab, setActiveTab] = useState<"going" | "maybe">("going");
+  type ParticipantTab = "going" | "maybe";
+  const [activeTab, setActiveTab] = useState<ParticipantTab>("going");
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const { user } = useAuth();
   const {
     status: participationStatus,
     isLoading,
@@ -99,6 +108,9 @@ export default function EventScreen({
     error: eventError,
     isNotFound,
   } = useEvent(eventId);
+
+  // Check if current user is the event creator
+  const isCreator = eventData?.creator_id === user?.id;
 
   // Use participants from useEventParticipation hook
 
@@ -145,7 +157,6 @@ export default function EventScreen({
     error: messagesError,
     sendMessage,
   } = useEventChat(eventId);
-  const { user } = useAuth();
 
   // State for the new message input
   const [newMessage, setNewMessage] = useState("");
@@ -184,6 +195,17 @@ export default function EventScreen({
       scrollToBottom();
     }
   }, [messages]);
+
+  // Get current user ID
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
 
   if (isLoadingEvent) {
     return (
@@ -314,301 +336,317 @@ export default function EventScreen({
   function EventDetailView() {
     if (!event) return null;
 
+    const [editFormData, setEditFormData] = useState({
+      title: event.title,
+      description: event.description,
+      location: event.location,
+      start_time: event.start_time,
+      end_time: event.end_time,
+      imageFile: null as File | null,
+      imagePreview: event.image_url || "",
+    });
+
+    const handleChange = (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    ) => {
+      const { name, value } = e.target;
+      setEditFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    };
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      setEditFormData((prev) => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: URL.createObjectURL(file),
+      }));
+    };
+
+    const handleSaveEdit = async () => {
+      try {
+        let image_url = event.image_url;
+
+        // Upload new image if one was selected
+        if (editFormData.imageFile) {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("event-images")
+            .upload(`${eventId}/${editFormData.imageFile.name}`, editFormData.imageFile);
+
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("event-images")
+            .getPublicUrl(`${eventId}/${editFormData.imageFile.name}`);
+
+          image_url = publicUrl;
+        }
+
+        // Update event data
+        const { error: updateError } = await supabase
+          .from("events")
+          .update({
+            title: editFormData.title,
+            description: editFormData.description,
+            location: editFormData.location,
+            start_time: editFormData.start_time,
+            end_time: editFormData.end_time,
+            image_url,
+          })
+          .eq("id", eventId);
+
+        if (updateError) throw updateError;
+
+        toast.success("Event updated successfully!");
+        setIsEditMode(false);
+      } catch (error) {
+        console.error("Error updating event:", error);
+        toast.error("Failed to update event. Please try again.");
+      }
+    };
+
     return (
-      <div className="p-4 md:p-8 space-y-6">
-        {/* Only show image container if there's an image */}
-        {event.image_url && (
-          <div className="relative w-full aspect-video mb-6 rounded-lg overflow-hidden bg-gray-100 max-h-64 md:max-h-80">
-            <Image
-              src={event.image_url}
-              alt={event.title}
-              fill
-              className="object-cover w-full h-full"
-              priority
-              sizes="(max-width: 768px) 100vw, 800px"
-            />
-          </div>
-        )}
-
-        {/* MOVED: About section now comes first */}
-        <div className="mb-6">
-          <h2 className="font-medium text-xl mb-3">About</h2>
-          <p className="text-lg text-gray-700">{event.description}</p>
+      <div className="flex-1 overflow-y-auto">
+        <div className="relative w-full h-64 md:h-80">
+          <Image
+            src={isEditMode ? editFormData.imagePreview : (event.image_url || "/placeholder.svg")}
+            alt={event.title}
+            width={800}
+            height={400}
+            className="w-full h-full object-cover"
+          />
+          {isCreator && !isEditMode && (
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="absolute top-4 right-4 bg-white bg-opacity-90 text-black px-4 py-2 rounded-md shadow-sm hover:bg-opacity-100 transition-opacity"
+            >
+              Edit Event
+            </button>
+          )}
         </div>
 
-        {/* Location, time, and RSVP buttons */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div className="space-y-2">
-            <div className="flex items-center text-base">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="mr-2 text-gray-500"
-              >
-                <path
-                  d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+        <div className="p-6 md:p-8">
+          {isEditMode ? (
+            <div className="space-y-4">
+              <Input
+                name="title"
+                value={editFormData.title}
+                onChange={handleChange}
+                placeholder="Event Title"
+                className="text-xl font-bold"
+              />
+              <div>
+                <label className="block text-sm font-medium mb-1">Event Image</label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full"
                 />
-                <circle
-                  cx="12"
-                  cy="10"
-                  r="3"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="text-gray-700">{event.location}</span>
-            </div>
-            <div className="flex items-center text-base">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="mr-2 text-gray-500"
-              >
-                <rect
-                  x="3"
-                  y="4"
-                  width="18"
-                  height="18"
-                  rx="2"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <path
-                  d="M16 2v4M8 2v4M3 10h18M12 16l-4 4m0 0l4 4m-4-4h8"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="text-gray-700">
-                {formattedDate} · {formattedTime}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              onClick={handleGoingClick}
-              disabled={isLoading}
-              variant={participationStatus === "going" ? "default" : "outline"}
-              className={`${
-                participationStatus === "going"
-                  ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
-                  : ""
-              }`}
-            >
-              {participationStatus === "going" ? (
-                <CheckCircle className="h-4 w-4 mr-1.5" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
-              )}
-              I'm Going
-            </Button>
-            <Button
-              onClick={handleMaybeClick}
-              disabled={isLoading}
-              variant={participationStatus === "maybe" ? "default" : "outline"}
-              className={`${
-                participationStatus === "maybe"
-                  ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
-                  : ""
-              }`}
-            >
-              {participationStatus === "maybe" ? (
-                <CheckCircle className="h-4 w-4 mr-1.5" />
-              ) : (
-                <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
-              )}
-              Maybe
-            </Button>
-          </div>
-        </div>
-
-        {/* Participants section remains at the bottom */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-medium text-lg">Participants</h2>
-            <div className="text-base text-[#ffac6d]">
-              {participants.going.length} Going · {participants.maybe.length}{" "}
-              Maybe
-            </div>
-          </div>
-
-          {/* Tabs for Going/Maybe */}
-          <div className="flex border-b mb-4">
-            <button
-              className={`py-2 px-4 font-medium text-sm ${
-                activeTab === "going"
-                  ? "border-b-2 border-[#ffac6d] text-[#ffac6d]"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => setActiveTab("going")}
-            >
-              Going ({participants.going.length})
-            </button>
-            <button
-              className={`py-2 px-4 font-medium text-sm ${
-                activeTab === "maybe"
-                  ? "border-b-2 border-[#ffac6d] text-[#ffac6d]"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-              onClick={() => setActiveTab("maybe")}
-            >
-              Maybe ({participants.maybe.length})
-            </button>
-          </div>
-
-          {/* Brick layout for participants */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-2">
-            {activeTab === "going" ? (
-              participants.going.length > 0 ? (
-                participants.going.map((participant) => (
-                  <div
-                    key={participant.id}
-                    className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
-                    onClick={() => handleParticipantClick(participant)}
-                  >
-                    <div className="flex items-center justify-between w-full gap-4">
-                      <div className="flex items-center gap-2 flex-shrink-1">
-                        <Avatar className="w-7 h-7 flex-shrink-0">
-                          <Image
-                            src={participant.avatar_url || "/placeholder.svg"}
-                            alt={participant.full_name || "User"}
-                            width={28}
-                            height={28}
-                            className="object-cover"
-                          />
-                        </Avatar>
-                        <span className="font-medium text-sm">
-                          {participant.full_name || "User"}
-                          {participant.id === event?.creator_id && " (HOST)"}
-                        </span>
-                      </div>
-                      <div className="flex gap-1">
-                        {participant.instruments &&
-                        participant.instruments.length > 0
-                          ? participant.instruments
-                              .slice(0, 2)
-                              .map((instrument) => (
-                                <span
-                                  key={instrument}
-                                  className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
-                                  title={instrument}
-                                >
-                                  {musicIcons.find(
-                                    (icon) =>
-                                      icon.id === instrument &&
-                                      icon.type === "instrument"
-                                  )?.emoji || "🎵"}
-                                </span>
-                              ))
-                          : null}
-
-                        {participant.genres && participant.genres.length > 0
-                          ? participant.genres.slice(0, 1).map((genre) => (
-                              <span
-                                key={genre}
-                                className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
-                                title={genre}
-                              >
-                                {musicIcons.find(
-                                  (icon) =>
-                                    icon.id === genre && icon.type === "genre"
-                                )?.emoji || "🎵"}
-                              </span>
-                            ))
-                          : null}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-gray-500 text-sm col-span-full">
-                  No one is going yet
-                </div>
-              )
-            ) : participants.maybe.length > 0 ? (
-              participants.maybe.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
-                  onClick={() => handleParticipantClick(participant)}
-                >
-                  <div className="flex items-center justify-between w-full gap-4">
-                    <div className="flex items-center gap-2 flex-shrink-1">
-                      <Avatar className="w-7 h-7 flex-shrink-0">
-                        <Image
-                          src={participant.avatar_url || "/placeholder.svg"}
-                          alt={participant.full_name || "User"}
-                          width={28}
-                          height={28}
-                          className="object-cover"
-                        />
-                      </Avatar>
-                      <span className="font-medium text-sm">
-                        {participant.full_name || "User"}
-                        {participant.id === event?.creator_id && " (HOST)"}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      {participant.instruments &&
-                      participant.instruments.length > 0
-                        ? participant.instruments
-                            .slice(0, 2)
-                            .map((instrument) => (
-                              <span
-                                key={instrument}
-                                className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
-                                title={instrument}
-                              >
-                                {musicIcons.find(
-                                  (icon) =>
-                                    icon.id === instrument &&
-                                    icon.type === "instrument"
-                                )?.emoji || "🎵"}
-                              </span>
-                            ))
-                        : null}
-
-                      {participant.genres && participant.genres.length > 0
-                        ? participant.genres.slice(0, 1).map((genre) => (
-                            <span
-                              key={genre}
-                              className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
-                              title={genre}
-                            >
-                              {musicIcons.find(
-                                (icon) =>
-                                  icon.id === genre && icon.type === "genre"
-                              )?.emoji || "🎵"}
-                            </span>
-                          ))
-                        : null}
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-gray-500 text-sm col-span-full">
-                No maybes yet
               </div>
-            )}
-          </div>
+              <Input
+                name="location"
+                value={editFormData.location}
+                onChange={handleChange}
+                placeholder="Location"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  type="datetime-local"
+                  name="start_time"
+                  value={editFormData.start_time}
+                  onChange={handleChange}
+                />
+                <Input
+                  type="datetime-local"
+                  name="end_time"
+                  value={editFormData.end_time}
+                  onChange={handleChange}
+                />
+              </div>
+              <Textarea
+                name="description"
+                value={editFormData.description}
+                onChange={handleChange}
+                placeholder="Event Description"
+                rows={4}
+              />
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setIsEditMode(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 mb-8">
+                <h1 className="text-2xl font-bold">{event.title}</h1>
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span className="text-base">{event.location}</span>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <span className="text-base">{formattedDate} • {formattedTime}</span>
+                </div>
+              </div>
+
+              <div className="mb-8">
+                <h2 className="font-medium text-lg mb-3">About</h2>
+                <p className="text-base">{event.description}</p>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                <div className="space-y-2">
+                  <div className="flex items-center text-base">
+                    <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-gray-700">{event.location}</span>
+                  </div>
+                  <div className="flex items-center text-base">
+                    <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-gray-700">
+                      {formattedDate} · {formattedTime}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleGoingClick}
+                    disabled={isLoading}
+                    variant={participationStatus === "going" ? "default" : "outline"}
+                    className={`${
+                      participationStatus === "going"
+                        ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                        : ""
+                    }`}
+                  >
+                    {participationStatus === "going" ? (
+                      <CheckCircle className="h-4 w-4 mr-1.5" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                    )}
+                    I'm Going
+                  </Button>
+                  <Button
+                    onClick={handleMaybeClick}
+                    disabled={isLoading}
+                    variant={participationStatus === "maybe" ? "default" : "outline"}
+                    className={`${
+                      participationStatus === "maybe"
+                        ? "bg-[#ffac6d] hover:bg-[#fdc193] text-black"
+                        : ""
+                    }`}
+                  >
+                    {participationStatus === "maybe" ? (
+                      <CheckCircle className="h-4 w-4 mr-1.5" />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full border border-gray-300 mr-1.5" />
+                    )}
+                    Maybe
+                  </Button>
+                </div>
+              </div>
+
+              {/* Participants section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-medium">Participants</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={activeTab === "going" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveTab("going")}
+                      className={activeTab === "going" ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]" : ""}
+                    >
+                      Going ({participants.going.length})
+                    </Button>
+                    <Button
+                      variant={activeTab === "maybe" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveTab("maybe")}
+                      className={activeTab === "maybe" ? "bg-[#ffac6d] text-black hover:bg-[#fdc193]" : ""}
+                    >
+                      Maybe ({participants.maybe.length})
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {activeTab === "going" ? (
+                    participants.going.length > 0 ? (
+                      participants.going.map((participant) => (
+                        <div
+                          key={participant.id}
+                          className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
+                          onClick={() => handleParticipantClick(participant)}
+                        >
+                          <div className="flex items-center justify-between w-full gap-4">
+                            <div className="flex items-center gap-2 flex-shrink-1">
+                              <Avatar className="w-7 h-7 flex-shrink-0">
+                                <Image
+                                  src={participant.avatar_url || "/placeholder.svg"}
+                                  alt={participant.full_name || "User"}
+                                  width={28}
+                                  height={28}
+                                  className="object-cover"
+                                />
+                              </Avatar>
+                              <span className="font-medium text-sm">
+                                {participant.full_name || "User"}
+                                {participant.id === event.creator_id && " (HOST)"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-gray-500 text-sm col-span-full">
+                        No one is going yet
+                      </div>
+                    )
+                  ) : participants.maybe.length > 0 ? (
+                    participants.maybe.map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="bg-[#ffd2b0] rounded-lg py-2 px-3 cursor-pointer hover:bg-[#fdc193] transition-colors shadow-sm w-full"
+                        onClick={() => handleParticipantClick(participant)}
+                      >
+                        <div className="flex items-center justify-between w-full gap-4">
+                          <div className="flex items-center gap-2 flex-shrink-1">
+                            <Avatar className="w-7 h-7 flex-shrink-0">
+                              <Image
+                                src={participant.avatar_url || "/placeholder.svg"}
+                                alt={participant.full_name || "User"}
+                                width={28}
+                                height={28}
+                                className="object-cover"
+                              />
+                            </Avatar>
+                            <span className="font-medium text-sm">
+                              {participant.full_name || "User"}
+                              {participant.id === event.creator_id && " (HOST)"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-gray-500 text-sm col-span-full">
+                      No one has responded maybe
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -623,7 +661,7 @@ export default function EventScreen({
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
             <Image
-              src={event.image || "/placeholder.svg"}
+              src={event.image_url || "/placeholder.svg"}
               alt="Event"
               width={32}
               height={32}
@@ -633,6 +671,16 @@ export default function EventScreen({
           <h1 className="text-lg font-medium">{event.title}</h1>
         </div>
         <div className="ml-auto flex gap-2">
+          {currentUserId === event.creator_id && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditMode(!isEditMode)}
+              className="border-[#ffac6d] text-[#ffac6d] hover:bg-[#fff5ee]"
+            >
+              {isEditMode ? "Cancel Edit" : "Edit Event"}
+            </Button>
+          )}
           {isDesktop ? (
             <div className="flex gap-2">
               <Button

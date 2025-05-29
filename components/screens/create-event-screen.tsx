@@ -28,8 +28,7 @@ export default function CreateEventScreen({
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  // Use a default user ID for now
-  const defaultUserId = "00000000-0000-0000-0000-000000000000";
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -140,7 +139,7 @@ export default function CreateEventScreen({
         location: formData.location.trim() || null,
         start_time: formData.startTime,
         end_time: formData.endTime,
-        created_by: defaultUserId,
+        creator_id: user?.id,
         image_url: imageUrl || null,
       };
 
