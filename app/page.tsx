@@ -163,6 +163,7 @@ export default function Home() {
             setActiveScreen={setActiveScreen}
             selectedEvent={selectedEvent}
             onOpenEvent={handleOpenEvent}
+            isViewingProfile={false}
           />
         )}
 
@@ -170,7 +171,12 @@ export default function Home() {
       </div>
 
       {!isDesktop && (
-        <MobileNav activeScreen={activeScreen} setActiveScreen={setActiveScreen} selectedEvent={selectedEvent} />
+        <MobileNav
+          activeScreen={activeScreen}
+          setActiveScreen={setActiveScreen}
+          selectedEvent={selectedEvent}
+          isViewingProfile={false}
+        />
       )}
     </div>
   )

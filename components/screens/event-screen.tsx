@@ -256,15 +256,22 @@ export default function EventScreen({
   }
 
   const navigateToProfile = (userId: string, name: string) => {
-    // Store the current event ID in session storage before navigating
-    if (typeof window !== "undefined" && eventId) {
-      sessionStorage.setItem("referringEventId", eventId);
+    try {
+      // Store the current event ID in session storage before navigating
+      if (typeof window !== "undefined" && eventId) {
+        sessionStorage.setItem("referringEventId", eventId);
+        
+        // Use window.location for more reliable navigation in production
+        window.location.href = `/profile/${userId}`;
+      } else {
+        // Fallback to router.push if window is not available
+        router.push(`/profile/${userId}`);
+      }
+    } catch (error) {
+      console.error('Error navigating to profile:', error);
+      // Fallback to basic navigation
+      router.push(`/profile/${userId}`);
     }
-
-    // Navigate to user profile
-    console.log(`Navigating to ${name}'s profile (${userId})`);
-    // Navigate to the user's profile page
-    router.push(`/profile/${userId}`);
   };
 
   // Handle participant click

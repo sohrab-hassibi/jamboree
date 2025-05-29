@@ -11,12 +11,16 @@ interface MobileNavProps {
   activeScreen: string;
   setActiveScreen: (screen: string) => void;
   selectedEvent: string | null;
+  isViewingProfile?: boolean;
+  isCurrentUser?: boolean;
 }
 
 export function MobileNav({
   activeScreen,
   setActiveScreen,
   selectedEvent,
+  isViewingProfile = false,
+  isCurrentUser = true,
 }: MobileNavProps) {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -94,11 +98,17 @@ export function MobileNav({
           activeScreen === item.id ||
           (item.id === "events" && activeScreen === "event");
 
+        // Determine if the button should be interactive
+        const isProfileButton = item.id === "profile";
+        const isInteractive = !isProfileButton || !isViewingProfile || isCurrentUser;
+
         return (
           <button
             key={item.id}
             data-screen={item.id}
             onClick={() => {
+              if (!isInteractive) return;
+              
               // If we're in an event and clicking the home/events button, go back to events list
               if (activeScreen === "event" && item.id === "events") {
                 setActiveScreen("events");
@@ -106,7 +116,7 @@ export function MobileNav({
                 setActiveScreen(item.id);
               }
             }}
-            className="flex flex-col items-center justify-center h-full w-full"
+            className={`flex flex-col items-center justify-center h-full w-full ${!isInteractive ? "opacity-50 cursor-default" : ""}`}
           >
             <IconComponent
               className={item.id !== 'profile' || !userProfile?.avatar_url ? `h-5 w-5 ${

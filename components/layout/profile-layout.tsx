@@ -37,6 +37,13 @@ export function ProfileLayout({ children, isCurrentUser = false }: ProfileLayout
       return;
     }
     
+    if (screen === "profile" && !isCurrentUser) {
+      // When viewing another user's profile and clicking the profile section,
+      // navigate to the current user's profile
+      window.location.href = "/profile";
+      return;
+    }
+    
     setActiveScreen(screen);
   };
 
@@ -49,6 +56,8 @@ export function ProfileLayout({ children, isCurrentUser = false }: ProfileLayout
             setActiveScreen={handleScreenChange}
             selectedEvent={selectedEvent}
             onOpenEvent={handleOpenEvent}
+            isViewingProfile={true}
+            isCurrentUser={isCurrentUser}
           />
         )}
 
@@ -59,7 +68,9 @@ export function ProfileLayout({ children, isCurrentUser = false }: ProfileLayout
         <MobileNav 
           activeScreen={activeScreen} 
           setActiveScreen={handleScreenChange} 
-          selectedEvent={selectedEvent} 
+          selectedEvent={selectedEvent}
+          isViewingProfile={true}
+          isCurrentUser={isCurrentUser}
         />
       )}
     </div>

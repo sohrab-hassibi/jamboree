@@ -21,6 +21,8 @@ interface SidebarProps {
   setActiveScreen: (screen: string) => void;
   selectedEvent: string | null;
   onOpenEvent: (eventId: string) => void;
+  isViewingProfile?: boolean;
+  isCurrentUser?: boolean;
 }
 
 export function Sidebar({
@@ -28,6 +30,8 @@ export function Sidebar({
   setActiveScreen,
   selectedEvent,
   onOpenEvent,
+  isViewingProfile = false,
+  isCurrentUser = true,
 }: SidebarProps) {
   const [profile, setProfile] = useState<ProfileData & { avatar_url?: string }>(
     { name: "" }
@@ -201,7 +205,10 @@ export function Sidebar({
       </div>
 
       <div className="p-5 border-b">
-        <div className="flex items-center gap-3">
+        <div 
+          className={`flex items-center gap-3 ${(!isViewingProfile || isCurrentUser) ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+          onClick={() => (!isViewingProfile || isCurrentUser) && setActiveScreen("profile")}
+        >
           <Avatar className="h-10 w-10 border">
             <AvatarImage
               src={profile.avatar_url || undefined}
