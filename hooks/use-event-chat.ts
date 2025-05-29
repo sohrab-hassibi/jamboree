@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/SupabaseContext';
+import { getCurrentISOString } from '@/utils/date-utils';
 
 export interface ChatMessage {
   id: string;
@@ -134,7 +135,7 @@ export function useEventChat(eventId: string) {
         event_id: eventId,
         user_id: user.id,
         text,
-        created_at: new Date().toISOString(),
+        created_at: getCurrentISOString(),
         user: {
           id: user.id,
           full_name: user.user_metadata?.full_name || 'You',
@@ -241,7 +242,7 @@ export function useEventChat(eventId: string) {
                 msg.text === newMessage.text && 
                 msg.user_id === newMessage.user_id &&
                 // Only consider messages created in the last minute as potential duplicates
-                (new Date().getTime() - new Date(msg.created_at).getTime() < 60000)
+                (Date.now() - new Date(msg.created_at).getTime() < 60000)
               );
               
               if (hasTempMessage) {

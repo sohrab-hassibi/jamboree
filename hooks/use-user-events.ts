@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/SupabaseContext';
+import { getCurrentISOString } from '@/utils/date-utils';
 
 export interface UserEvent {
   id: string;
@@ -32,7 +33,7 @@ export function useUserEvents() {
       setIsLoading(true);
       setError(null);
       
-      const now = new Date().toISOString();
+      const now = getCurrentISOString();
       
       // Fetch upcoming events
       const { data: upcomingEventsData, error: upcomingError } = await supabase

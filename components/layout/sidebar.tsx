@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Users, Home } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
+import { formatDate, formatEventCardDate } from "@/utils/date-utils";
 import Image from "next/image";
 
 interface ProfileData {
@@ -199,52 +200,28 @@ export function Sidebar({
         </Link>
       </div>
 
-      <div
-        className={`p-5 border-b cursor-pointer transition-colors ${
-          activeScreen === "profile" ? "bg-[#ffd2b0]" : "hover:bg-gray-100"
-        }`}
-        onClick={() => {
-          // Always navigate to the current user's profile
-          if (window.location.pathname.includes("/profile/")) {
-            // If we're on another user's profile, go back to main app with profile tab selected
-            window.location.href = "/?tab=profile";
-          } else {
-            // If we're already in the main app, just switch to profile tab
-            setActiveScreen("profile");
-          }
-        }}
-      >
+      <div className="p-5 border-b">
         <div className="flex items-center gap-3">
-          <Avatar className="h-12 w-12 relative">
-            {profile.avatar_url ? (
-              <>
-                <AvatarImage
-                  src={profile.avatar_url}
-                  alt="Profile"
-                  className="object-cover"
-                  loading="eager"
-                />
-                <AvatarFallback>
-                  {profile.name ? profile.name.charAt(0) : "U"}
-                </AvatarFallback>
-              </>
-            ) : (
-              <>
-                <AvatarImage
-                  src="/placeholder.svg?height=48&width=48"
-                  alt="Profile"
-                  className="object-cover"
-                  loading="eager"
-                />
-                <AvatarFallback>
-                  {profile.name ? profile.name.charAt(0) : "U"}
-                </AvatarFallback>
-              </>
-            )}
+          <Avatar className="h-10 w-10 border">
+            <AvatarImage
+              src={profile.avatar_url || undefined}
+              alt={profile.name}
+            />
+            <AvatarFallback>
+              {profile.name
+                .split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div>
-            <div className="font-medium text-lg">{profile.name}</div>
-            <div className="text-xs text-gray-500">View Profile</div>
+            <div className="font-medium">{profile.name}</div>
+            <div className="text-xs text-gray-500">
+              {profile.instruments?.length
+                ? profile.instruments.join(", ")
+                : "No instruments yet"}
+            </div>
           </div>
         </div>
       </div>
@@ -256,7 +233,6 @@ export function Sidebar({
             return (
               <li key={item.id}>
                 <button
-                  data-screen={item.id}
                   onClick={() => setActiveScreen(item.id)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     activeScreen === item.id
@@ -264,7 +240,7 @@ export function Sidebar({
                       : "hover:bg-gray-100"
                   }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5 text-[#ffac6d]" />
                   <span>{item.label}</span>
                 </button>
               </li>
@@ -288,13 +264,8 @@ export function Sidebar({
           ) : (
             <ul className="space-y-1">
               {upcomingEvents.map((event) => {
-                // Format date
-                const date = new Date(event.start_time);
-                const dateStr = date.toLocaleDateString([], {
-                  weekday: "short",
-                  month: "numeric",
-                  day: "numeric",
-                });
+                // Format date using Pacific Time
+                const dateStr = formatEventCardDate(event.start_time);
 
                 return (
                   <li key={event.id}>
@@ -320,24 +291,19 @@ export function Sidebar({
                               className="object-cover"
                             />
                           </div>
-                          <div>
-                            <div className="font-medium text-sm">
-                              {event.title}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {dateStr}
-                            </div>
+                          <div className="truncate font-medium">
+                            {event.title}
                           </div>
                         </div>
-                        {/* Status indicator */}
-                        <div
-                          className={`absolute top-0 right-0 w-2 h-2 rounded-full ${
-                            event.participationStatus === "going"
-                              ? "bg-green-400"
-                              : "bg-yellow-400"
-                          }`}
-                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {dateStr}
+                        </div>
                       </div>
+                      {event.participationStatus === "going" ? (
+                        <div className="h-2 w-2 rounded-full bg-green-500 mt-2"></div>
+                      ) : (
+                        <div className="h-2 w-2 rounded-full bg-yellow-500 mt-2"></div>
+                      )}
                     </button>
                   </li>
                 );
@@ -359,13 +325,8 @@ export function Sidebar({
                   new Date(b.start_time).getTime()
               )[0];
 
-              // Format date for display
-              const date = new Date(nextEvent.start_time);
-              const dateStr = date.toLocaleDateString([], {
-                weekday: "long",
-                month: "numeric",
-                day: "numeric",
-              });
+              // Format date for display using Pacific Time
+              const dateStr = formatDate(nextEvent.start_time);
 
               return (
                 <>
@@ -382,12 +343,7 @@ export function Sidebar({
               );
             })()}
           </div>
-        ) : (
-          <div className="bg-[#ffd2b0] rounded-lg p-3">
-            <h3 className="font-medium mb-1">Upcoming Jam</h3>
-            <p className="text-sm">No upcoming events</p>
-          </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
