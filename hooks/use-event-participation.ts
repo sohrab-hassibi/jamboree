@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { getCurrentISOString } from "@/utils/date-utils";
 // No need for auth helpers, we'll use the auth state directly
 
 interface Participant {
@@ -393,7 +394,7 @@ export function useEventParticipation(eventId: string): EventParticipation {
         const updateData = {
           participants_going: stringifyParticipants(updatedGoing),
           participants_maybe: stringifyParticipants(updatedMaybe),
-          updated_at: new Date().toISOString(),
+          updated_at: getCurrentISOString(),
         };
 
         console.log(
@@ -443,7 +444,7 @@ export function useEventParticipation(eventId: string): EventParticipation {
             supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL
               ? "Configured"
               : "Missing",
-            timestamp: new Date().toISOString(),
+            timestamp: getCurrentISOString(),
           })
         );
         // Reload participation data to ensure consistency

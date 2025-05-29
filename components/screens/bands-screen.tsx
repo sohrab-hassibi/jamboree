@@ -8,7 +8,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useState, useEffect } from "react"
 import BandChatScreen from "./band-chat-screen"
 import { useBands, type Band } from "@/hooks/use-bands"
-import { formatDistanceToNow } from "date-fns"
+import { formatDate, formatTime, getCurrentISOString, formatRelativeTime } from "@/utils/date-utils"
 
 interface BandsScreenProps {
   onCreateBand?: () => void
@@ -24,7 +24,7 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
     if (!band.last_message) {
       return {
         message: "No messages yet",
-        time: formatDistanceToNow(new Date(band.updated_at), { addSuffix: true }),
+        time: formatRelativeTime(band.updated_at),
         unread: 0
       };
     }
@@ -36,7 +36,7 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
       
     return {
       message,
-      time: formatDistanceToNow(new Date(band.last_message.created_at), { addSuffix: true }),
+      time: formatRelativeTime(band.last_message.created_at),
       unread: 0 // We'll implement unread count later
     };
   };

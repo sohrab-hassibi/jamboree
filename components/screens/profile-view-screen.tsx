@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { formatDate, formatEventCardDate, isFutureDate, isPastDate } from "@/utils/date-utils";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
@@ -125,14 +126,8 @@ function UpcomingEvents({ userId }: { userId: string }) {
   }, [userId]);
   
   const formatEventDate = (startTime: string) => {
-    const start = new Date(startTime);
-    
-    // Format the date in a compact way for the cards
-    return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
-    });
+    // Format the date in Pacific Time for the cards
+    return formatEventCardDate(startTime);
   };
   
   const handleEventClick = (eventId: string) => {
@@ -298,14 +293,8 @@ function PostGamesEvents({ userId }: { userId: string }) {
   }, [userId]);
   
   const formatEventDate = (startTime: string) => {
-    const start = new Date(startTime);
-    
-    // Format the date in a compact way for the cards
-    return start.toLocaleDateString([], {
-      weekday: 'short',
-      month: 'numeric',
-      day: 'numeric'
-    });
+    // Format the date in Pacific Time for the cards
+    return formatEventCardDate(startTime);
   };
   
   const handleEventClick = (eventId: string) => {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/context/SupabaseContext';
 import { supabase } from '@/lib/supabase';
+import { getCurrentISOString } from '@/utils/date-utils';
 
 export interface BandMessage {
   id: string;
@@ -151,7 +152,7 @@ export function useBandMessages(bandId: string) {
         band_id: bandId,
         user_id: user.id,
         text,
-        created_at: new Date().toISOString(),
+        created_at: getCurrentISOString(),
         user: {
           id: user.id,
           full_name: user.user_metadata?.full_name || 'You',
@@ -260,7 +261,7 @@ export function useBandMessages(bandId: string) {
                 msg.text === newMessage.text && 
                 msg.user_id === newMessage.user_id &&
                 // Only consider messages created in the last minute as potential duplicates
-                (new Date().getTime() - new Date(msg.created_at).getTime() < 60000)
+                (Date.now() - new Date(msg.created_at).getTime() < 60000)
               );
               
               if (hasTempMessage) {

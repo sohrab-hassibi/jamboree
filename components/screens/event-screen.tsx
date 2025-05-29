@@ -11,14 +11,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import {
-  useState,
-  useMemo,
-  useEffect,
-  useCallback,
-  FormEvent,
-  useRef,
-} from "react";
+import { useEffect, useMemo, useRef, useState, FormEvent, useCallback } from "react";
+import { formatDate, formatTime, formatTimeRange, formatMessageTime, getCurrentISOString } from "@/utils/date-utils";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEventParticipation } from "@/hooks/use-event-participation";
@@ -114,28 +108,17 @@ export default function EventScreen({
   // Use image from event data - using image_url to match the database schema
   const eventImage = event?.image_url || "/placeholder-event.jpg";
 
-  // Format date and time
+  // Format date and time in Pacific Time
+
+  // Format date and time in Pacific Time
   const formattedDate = useMemo(() => {
     if (!event?.start_time) return "";
-    const date = new Date(event.start_time);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDate(event.start_time);
   }, [event?.start_time]);
 
   const formattedTime = useMemo(() => {
     if (!event?.start_time || !event?.end_time) return "";
-    const formatTime = (dateString: string) => {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      });
-    };
-    return `${formatTime(event.start_time)} - ${formatTime(event.end_time)}`;
+    return formatTimeRange(event.start_time, event.end_time);
   }, [event?.start_time, event?.end_time]);
 
   // Use the event chat hook for real-time messaging
@@ -703,11 +686,7 @@ export default function EventScreen({
                 <>
                   {messages.map((message) => {
                     const isCurrentUser = message.user_id === user?.id;
-                    const messageDate = new Date(message.created_at);
-                    const messageTime = messageDate.toLocaleTimeString([], {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    });
+                    const messageTime = formatMessageTime(message.created_at);
 
                     return (
                       <div

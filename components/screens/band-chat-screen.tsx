@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useRef, useState } from "react"
-import { format } from "date-fns"
+import { formatDate, formatTime, formatMessageTime, getCurrentISOString, isSameDay } from "@/utils/date-utils"
 
 import { Input } from "@/components/ui/input"
 import { Avatar } from "@/components/ui/avatar"
@@ -261,17 +261,17 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
       const now = new Date()
       
       // If it's today, just show the time
-      if (date.toDateString() === now.toDateString()) {
-        return format(date, "h:mm a")
+      if (isSameDay(date, now)) {
+        return formatTime(date.toISOString())
       }
       
       // If it's this year, show month and day
       if (date.getFullYear() === now.getFullYear()) {
-        return format(date, "MMM d, h:mm a")
+        return formatDate(date.toISOString(), { month: 'short', day: 'numeric' }) + ', ' + formatTime(date.toISOString())
       }
       
       // Otherwise show full date
-      return format(date, "MMM d, yyyy, h:mm a")
+      return formatDate(date.toISOString(), { month: 'short', day: 'numeric', year: 'numeric' }) + ', ' + formatTime(date.toISOString())
     } catch (e) {
       console.error("Error formatting date:", e)
       return "Unknown time"
