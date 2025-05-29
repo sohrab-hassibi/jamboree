@@ -11,6 +11,12 @@ export async function middleware(req) {
   // Public paths that don't require auth
   const publicPaths = ['/', '/login', '/signup'];
   const isPublicPath = publicPaths.includes(req.nextUrl.pathname);
+  const isProfilePath = req.nextUrl.pathname.startsWith('/profile/');
+  
+  // Allow access to profile paths even without session
+  if (isProfilePath) {
+    return res;
+  }
   
   // If no session and trying to access protected route, redirect to login
   if (!session && !isPublicPath) {

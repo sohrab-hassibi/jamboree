@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Button } from "@/components/ui/button"
@@ -8,10 +8,346 @@ import { PlusCircle, Loader2, Search } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { format } from "date-fns"
 import { Input } from "@/components/ui/input"
+import { UserEvent } from "@/hooks/use-user-events"
+import { useAuth } from "@/context/SupabaseContext"
+
 
 interface EventsScreenProps {
   onOpenEvent: (eventId: string) => void
   onCreateEvent: () => void
+}
+
+interface Event {
+  id: string;
+  title: string;
+  start_time: string;
+  date: string;
+  end_time?: string;
+  location?: string;
+  image?: string;
+  description: string;
+  score?: number;
+  participants_going?: any[];
+  participants_maybe?: any[];
+}
+
+type Document = string; 
+
+class TfIdf {
+  documents: Document[] = [];
+  private termFrequency: Map<string, Map<string, number>> = new Map();
+  private documentFrequency: Map<string, number> = new Map();
+
+  // Add a document to the corpus
+  addDocument(doc: Document): void {
+    this.documents.push(doc);
+
+    const terms = this.tokenize(doc);
+    const termCounts: Map<string, number> = new Map();
+
+    // Count term frequencies in the document
+    terms.forEach((term) => {
+      termCounts.set(term, (termCounts.get(term) || 0) + 1);
+    });
+
+    // Normalize term frequencies
+    const totalTerms = terms.length;
+    const normalizedTermCounts: Map<string, number> = new Map();
+    termCounts.forEach((count, term) => {
+      normalizedTermCounts.set(term, count / totalTerms);
+    });
+
+    // Store term frequencies for this document
+    this.termFrequency.set(doc, normalizedTermCounts);
+
+    // Update document frequency for each term
+    const uniqueTerms = new Set(terms);
+    uniqueTerms.forEach((term) => {
+      this.documentFrequency.set(term, (this.documentFrequency.get(term) || 0) + 1);
+    });
+  }
+
+  // Calculate TF-IDF for a term in a specific document
+  calculateTfIdf(term: string, doc: Document): number {
+    const tf = this.termFrequency.get(doc)?.get(term) || 0;
+    const idf = this.calculateIdf(term);
+    return tf * idf;
+  }
+
+  // Calculate IDF for a term
+  private calculateIdf(term: string): number {
+    const totalDocuments = this.documents.length;
+    const docCount = this.documentFrequency.get(term) || 0;
+    return Math.log(totalDocuments / (1 + docCount));
+  }
+
+  // Tokenize a document into terms
+  tokenize(doc: Document): string[] {
+    if (!doc) return [];
+    return doc
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove punctuation
+      .split(/\s+/); // Split by whitespace
+  }
+}
+
+const createVector = (docIndex: number, vocab: string[], vocabIndex: Map<string, number>, tfidf: TfIdf): number[] => {
+  const vector = new Array(vocab.length).fill(0);
+  tfidf.tokenize(tfidf.documents[docIndex]).forEach((word: string) => {
+    const idx = vocabIndex.get(word);
+    if (idx) {
+      vector[idx] = tfidf.calculateTfIdf(word, tfidf.documents[docIndex]);
+    } 
+  });
+
+  return vector;
+};
+
+const cosineSim = (vec1: number[], vec2: number[]): number => {  
+  let totProd = 0;
+  let aProd = 0;
+  let bProd = 0;
+  vec1.forEach((aVal, i) => {
+    totProd = totProd + aVal * vec2[i];
+    aProd = aProd + aVal ** 2;
+    bProd = bProd + vec2[i] ** 2;
+  });
+  return totProd / (Math.sqrt(aProd) * Math.sqrt(bProd));
+};
+
+const instrumentCompatibility: Record<string, Record<string, number>> = {
+  guitar: {
+    guitar: 0.7,    // Rhythm + Lead guitar combinations
+    piano: 0.9,     // Classic combo
+    drums: 0.95,    // Essential rhythm section
+    saxophone: 0.8,  // Jazz/Blues combo
+    trumpet: 0.75,   // Horn section potential
+    violin: 0.85,    // Folk/Classical combo
+    vocals: 0.95,    // Guitar + vocals is classic
+    dj: 0.6         // Can work but needs arrangement
+  },
+  piano: {
+    guitar: 0.9,     // Classic combo
+    piano: 0.7,      // Piano duets can work well
+    drums: 0.9,      // Strong rhythmic foundation
+    saxophone: 0.9,   // Jazz standard
+    trumpet: 0.85,    // Jazz/Classical combo
+    violin: 0.95,     // Classical duo
+    vocals: 0.95,     // Essential accompaniment
+    dj: 0.5          // Less common pairing
+  },
+  drums: {
+    guitar: 0.95,    // Essential rhythm section
+    piano: 0.9,      // Strong rhythmic foundation
+    drums: 0.4,      // Multiple drums can be tricky
+    saxophone: 0.85,  // Jazz combo
+    trumpet: 0.85,    // Big band essential
+    violin: 0.7,      // Less common but can work
+    vocals: 0.9,      // Rhythm for vocals
+    dj: 0.8          // Beat matching potential
+  },
+  saxophone: {
+    guitar: 0.8,     // Jazz/Blues combo
+    piano: 0.9,      // Jazz standard
+    drums: 0.85,     // Jazz combo
+    saxophone: 0.75,  // Horn section
+    trumpet: 0.95,    // Classic horn section
+    violin: 0.7,      // Less common but interesting
+    vocals: 0.85,     // Jazz vocals
+    dj: 0.6          // Modern fusion
+  },
+  trumpet: {
+    guitar: 0.75,    // Horn section potential
+    piano: 0.85,     // Jazz/Classical combo
+    drums: 0.85,     // Big band essential
+    saxophone: 0.95,  // Classic horn section
+    trumpet: 0.8,     // Horn section
+    violin: 0.8,      // Classical orchestra
+    vocals: 0.8,      // Big band vocals
+    dj: 0.5          // Less common
+  },
+  violin: {
+    guitar: 0.85,    // Folk/Classical combo
+    piano: 0.95,     // Classical duo
+    drums: 0.7,      // Less common but can work
+    saxophone: 0.7,   // Less common but interesting
+    trumpet: 0.8,     // Classical orchestra
+    violin: 0.9,      // String ensemble
+    vocals: 0.9,      // Classical/Folk combo
+    dj: 0.4          // Uncommon pairing
+  },
+  vocals: {
+    guitar: 0.95,    // Guitar + vocals is classic
+    piano: 0.95,     // Essential accompaniment
+    drums: 0.9,      // Rhythm for vocals
+    saxophone: 0.85,  // Jazz vocals
+    trumpet: 0.8,     // Big band vocals
+    violin: 0.9,      // Classical/Folk combo
+    vocals: 0.8,      // Vocal harmonies
+    dj: 0.75         // Modern electronic
+  },
+  dj: {
+    guitar: 0.6,     // Can work but needs arrangement
+    piano: 0.5,      // Less common pairing
+    drums: 0.8,      // Beat matching potential
+    saxophone: 0.6,   // Modern fusion
+    trumpet: 0.5,     // Less common
+    violin: 0.4,      // Uncommon pairing
+    vocals: 0.75,    // Modern electronic
+    dj: 0.6          // B2B sets
+  }
+};
+
+const fetchEventsForUser = async (userId: string) => {
+  const now = new Date().toISOString();
+  
+  // Fetch upcoming events
+  const { data: upcomingEvents } = await supabase
+    .from('events')
+    .select('*')
+    .gt('start_time', now)
+    .order('start_time', { ascending: true });
+
+  // Fetch past events
+  const { data: pastEvents } = await supabase
+    .from('events')
+    .select('*')
+    .lt('start_time', now)
+    .order('start_time', { ascending: false });
+
+  // Process events to ensure we only get events where the user is actually in the participants
+  const filterUserEvents = (events: any[] | null) => {
+    return (events || []).filter(event => {
+      const isGoing = (event.participants_going || []).some((p: any) => {
+        if (typeof p === 'string') {
+          try {
+            const parsed = JSON.parse(p);
+            return parsed.id === userId;
+          } catch {
+            return p === userId;
+          }
+        }
+        return p.id === userId;
+      });
+
+      const isMaybe = (event.participants_maybe || []).some((p: any) => {
+        if (typeof p === 'string') {
+          try {
+            const parsed = JSON.parse(p);
+            return parsed.id === userId;
+          } catch {
+            return p === userId;
+          }
+        }
+        return p.id === userId;
+      });
+
+      return isGoing || isMaybe;
+    });
+  };
+
+  return {
+    upcomingEvents: filterUserEvents(upcomingEvents),
+    pastEvents: filterUserEvents(pastEvents)
+  };
+};
+
+const calculateEventScore = async (event: Event,
+  tfidf: TfIdf,
+  eventIndex: Map<string, number>,
+  vocab: string[],
+  vocabIndex: Map<string, number>,
+  userEvents: Event[],
+  userGenres: string[],
+  participants: { id: string; full_name: string; avatar_url: string; instruments?: string[]; genres?: string[] }[],
+  userInstruments: string[]
+): Promise<number> => {
+  
+  try {
+    let score = 0;
+    let total = 0;
+
+    // Calculate similarity with user events
+    try {
+      const targetVector = createVector(eventIndex.get(event.id) || 0, vocab, vocabIndex, tfidf);
+      userEvents.forEach((currEvent) => {
+        const currVector = createVector(eventIndex.get(currEvent.id) || 0, vocab, vocabIndex, tfidf);
+        const currCos = cosineSim(targetVector, currVector);
+        if (!isNaN(currCos)) {
+          total += currCos;
+        }
+      });
+      if (userEvents.length > 0) {
+        score += total / userEvents.length;
+      }
+    } catch (error) {
+      console.error(`Error calculating similarity for event ID: ${event.id}`, error);
+    }
+
+    // Calculate genre overlap and instrument compatibility
+    let sumGenres = 0;
+    let sumInstruments = 0;
+    let sumFriends = 0;
+
+    for (const participant of participants) {
+      try {
+        // Genre overlap
+        const participantGenres = participant.genres || [];
+        const genreInt = participantGenres.filter((genre) => userGenres.includes(genre));
+        const userUniqueGenres = userGenres.filter((genre) => !participantGenres.includes(genre));
+        const participantUniqueGenres = participantGenres.filter((genre) => !userGenres.includes(genre));
+        sumGenres += genreInt.length - 0.2 * (userUniqueGenres.length + participantUniqueGenres.length);
+
+        // Instrument compatibility
+        const participantInstruments = participant.instruments || [];
+        let numPairs = 0;
+        let pairTot = 0;
+        for (const userInstrument of userInstruments) {
+          for (const participantInstrument of participantInstruments) {
+            if (
+              instrumentCompatibility[userInstrument] &&
+              instrumentCompatibility[userInstrument][participantInstrument]
+            ) {
+              const weight = instrumentCompatibility[userInstrument][participantInstrument];
+              pairTot += weight;
+              numPairs++;
+            }
+          }
+        }
+        sumInstruments += numPairs > 0 ? pairTot / numPairs : 0;
+
+        // Friend overlap
+        try {
+          const participantEventsTemp = await fetchEventsForUser(participant.id);
+          const participantEvents = [...participantEventsTemp.upcomingEvents, ...participantEventsTemp.pastEvents];
+          const friendInt = participantEvents.filter((value) => userEvents.some(e => e.id === value.id));
+          const denom = Math.max(participantEvents.length, userEvents.length);
+          if (denom > 0) {
+            sumFriends += Math.sqrt(friendInt.length / denom);
+          }
+        } catch (error) {
+          console.error(`Error fetching events for participant ID: ${participant.id}`, error);
+          continue;
+        }
+      } catch (error) {
+        console.error(`Error processing participant ID: ${participant.id}`, error);
+      }
+    }
+
+    // Aggregate scores
+    score += participants.length > 0 ? sumGenres / participants.length : 0;
+    score += participants.length > 0 ? sumInstruments / participants.length : 0;
+    score += participants.length > 0 ? sumFriends / participants.length : 0;
+
+    console.log(`Score components for "${event.title}":`, {
+      totalScore: score
+    });
+    return score;
+    
+  } catch (error) {
+    console.error(`Error calculating score for event ID: ${event.id}`, error);
+    return 0; // Fallback score
+  }
 }
 
 export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScreenProps) {
@@ -22,12 +358,55 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
   const [isSearching, setIsSearching] = useState(false)
 
   const [events, setEvents] = useState<{
-    upcoming: Array<{ id: string; title: string; date: string; start_time: string; image: string }>;
-    past: Array<{ id: string; title: string; date: string; start_time: string; image: string }>;
+    upcoming: Array<Event>;
+    past: Array<Event>;
   }>({ upcoming: [], past: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userRsvps, setUserRsvps] = useState<{ [eventId: string]: string }>({});
+
+  const allEvents = useMemo(() => [...events.upcoming, ...events.past], [events]);
+
+  const { user } = useAuth();
+  const [userProfile, setUserProfile] = useState<{ genres: string[], instruments: string[] }>({ genres: [], instruments: [] });
+  
+  const userEvents = useMemo(() => {
+    if (!user) return [];
+    
+    return allEvents.filter(event => {
+      // Check if user is in going participants
+      const isGoing = event.participants_going?.some((p: any) => {
+        if (typeof p === 'string') {
+          try {
+            const parsed = JSON.parse(p);
+            return parsed.id === user.id;
+          } catch {
+            return p === user.id;
+          }
+        }
+        return p.id === user.id;
+      });
+
+      // Check if user is in maybe participants
+      const isMaybe = event.participants_maybe?.some((p: any) => {
+        if (typeof p === 'string') {
+          try {
+            const parsed = JSON.parse(p);
+            return parsed.id === user.id;
+          } catch {
+            return p === user.id;
+          }
+        }
+        return p.id === user.id;
+      });
+
+      return isGoing || isMaybe;
+    });
+  }, [allEvents, user]);
+  
+  const [eventToParticipant, setEventToParticipant] = useState<Record<string, any[]>>({});
+
+  const newTfIdf = new TfIdf();
 
   // Format date to a readable string
   const formatEventDate = (dateString: string) => {
@@ -98,6 +477,25 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
     fetchUserRsvps();
   }, []);
 
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user) return;
+      
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('genres, instruments')
+        .eq('id', user.id)
+        .single();
+        
+      if (!error && profileData) {
+        setUserProfile(profileData);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
   // Fetch events from Supabase
   useEffect(() => {
     const fetchEvents = async () => {
@@ -106,7 +504,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
         const now = new Date().toISOString();
         
         // Fetch upcoming events (start_time >= now)
-        const { data: upcomingData, error: upcomingError } = await supabase
+        const { data: upcomingData , error: upcomingError } = await supabase
           .from('events')
           .select('*')
           .gte('start_time', now)
@@ -124,16 +522,75 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
           throw new Error(upcomingError?.message || pastError?.message || 'Failed to fetch events');
         }
 
+        // intitialize TF-IDF
+
+        const tfidf = new TfIdf();
+      
+        // Add all events' name and description
+        allEvents.forEach((event) => {
+          if (!event.title || !event.description) {
+            throw new Error(`Missing title or description for event ID: ${event.id}`);
+          }
+          tfidf.addDocument(`${event.title} ${event.description}`);
+        });
+
+        // Create event index
+        let eventIndex: Map<string, number>;
+        eventIndex = new Map(allEvents.map((event, idx) => [event.id, idx]));
+      
+        // Build vocabulary
+        let vocabSet = new Set<string>();
+        allEvents.forEach((_, i) => {
+          tfidf.tokenize(tfidf.documents[i]).forEach((word: string) => vocabSet.add(word));
+        });
+
+        // Create vocabulary and index
+        let vocab: string[];
+        let vocabIndex: Map<string, number>;
+        
+        vocab = Array.from(vocabSet);
+        vocabIndex = new Map(vocab.map((word, idx) => [word, idx]));
+
+
+        const eventsWithScores: Event[] = await Promise.all(
+          (upcomingData || []).map(async (event) => ({
+            id: event.id,
+            title: event.title,
+            start_time: event.start_time,
+            date: formatEventDate(event.start_time),
+            end_time: event.end_time,
+            location: event.location,
+            description: event.description,
+            image: event.image_url || "/placeholder.svg",
+            participants_going: event.participants_going || [],
+            participants_maybe: event.participants_maybe || [],
+            score: await calculateEventScore(
+              event,
+              tfidf,
+              eventIndex,
+              vocab,
+              vocabIndex,
+              userEvents,
+              userProfile.genres,
+              [...(event.participants_going || []), ...(event.participants_maybe || [])],
+              userProfile.instruments
+            )
+          }))
+        );
+
         setEvents({
-          upcoming: (upcomingData || []).map(event => ({
-            ...event,
-            date: formatEventDate(event.start_time),
-            image: event.image_url || "/placeholder.svg"
-          })),
+          upcoming: eventsWithScores.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)),
           past: (pastData || []).map(event => ({
-            ...event,
+            id: event.id,
+            title: event.title,
+            start_time: event.start_time,
+            end_time: (event.end_time ?? null),
+            location: event.location,
+            description: event.description,
             date: formatEventDate(event.start_time),
-            image: event.image_url || "/placeholder.svg"
+            image: event.image_url || "/placeholder.svg",
+            participants_going: event.participants_going || [],
+            participants_maybe: event.participants_maybe || []
           }))
         });
       } catch (err) {
@@ -159,6 +616,7 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
       subscription.unsubscribe();
     };
   }, []);
+
 
   // Search events function
   const searchEvents = async (query: string) => {
@@ -396,3 +854,4 @@ export default function EventsScreen({ onOpenEvent, onCreateEvent }: EventsScree
     </div>
   )
 }
+
