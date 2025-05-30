@@ -8,14 +8,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { Calendar, MapPin } from "lucide-react";
 import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
 import { useRouter } from "next/navigation";
-
-// Define the music icon types
-type MusicIcon = {
-  id: string;
-  name: string;
-  emoji: string;
-  type: "instrument" | "genre";
-};
+import { MUSIC_ICONS, type MusicIcon } from "@/constants/music-icons"; // Add this import
 
 // Define event type
 interface PastEvent extends UserEvent {
@@ -395,26 +388,6 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
     }
   };
 
-  // Music icons data
-  const musicIcons: MusicIcon[] = [
-    { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-    { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-    { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-    { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-    { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-    { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-    { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-    { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-    { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-    { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-    { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-    { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-    { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-    { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-    { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-    { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-  ];
-
   // Load user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -526,7 +499,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                   </div>
                   {/* Icons absolutely positioned in this larger container */}
                   {[...(profileData.instruments || []), ...(profileData.genres || [])].map((iconId, index, arr) => {
-                    const icon = musicIcons.find((i) => i.id === iconId);
+                    const icon = MUSIC_ICONS.find((i) => i.id === iconId); // Changed from musicIcons to MUSIC_ICONS
                     if (!icon) return null;
                     const total = arr.length;
                     const baseRadius = 120;
@@ -568,7 +541,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                   <h3 className="text-lg font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.instruments?.map((instrument) => {
-                      const icon = musicIcons.find((i) => i.id === instrument);
+                      const icon = MUSIC_ICONS.find((i) => i.id === instrument); // Changed from musicIcons to MUSIC_ICONS
                       return (
                         <div
                           key={instrument}
@@ -588,7 +561,7 @@ export function ProfileScreen({ userId, isCurrentUser }: ProfileScreenProps) {
                   <h3 className="text-lg font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profileData?.genres?.map((genre) => {
-                      const icon = musicIcons.find((i) => i.id === genre);
+                      const icon = MUSIC_ICONS.find((i) => i.id === genre); // Changed from musicIcons to MUSIC_ICONS
                       return (
                         <div
                           key={genre}
