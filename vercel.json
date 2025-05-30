@@ -5,5 +5,15 @@
   "devCommand": "pnpm run dev",
   "ignoreCommand": "if [ -n \"$VERCEL_GIT_COMMIT_REF\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]; then exit 0; else exit 1; fi",
   "framework": "nextjs",
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/profile/:path*", "destination": "/profile/:path*" },
+    { "source": "/events/:path*", "destination": "/events/:path*" },
+    { "source": "/bands/:path*", "destination": "/bands/:path*" },
+    { "source": "/settings/:path*", "destination": "/settings/:path*" },
+    { "source": "/auth/:path*", "destination": "/auth/:path*" },
+    { "source": "/_next/:path*", "destination": "/_next/:path*" },
+    { "source": "/static/:path*", "destination": "/static/:path*" },
+    { "source": "/(.*)", "destination": "/" }
+  ]
 }
