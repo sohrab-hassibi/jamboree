@@ -60,6 +60,12 @@ export default function OnboardingFlow() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
+      console.log("Saving onboarding data:", {
+        instruments: formData.instruments,
+        genres: formData.genres,
+        bio: formData.bio
+      });
+
       // Upload profile data to profiles table
       const { error: profileError } = await supabase
         .from('profiles')
@@ -73,11 +79,35 @@ export default function OnboardingFlow() {
           updated_at: new Date().toISOString(),
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile save error:", profileError);
+        throw profileError;
+      }
 
+      // CRITICAL: Also update auth metadata for immediate access
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          instruments: formData.instruments,
+          genres: formData.genres,
+          bio: formData.bio,
+          avatar_url: formData.profilePhoto,
+          onboarding_completed: true,
+        }
+      });
+
+      if (authError) {
+        console.warn('Auth metadata update failed:', authError);
+      }
+
+      console.log("Onboarding data saved successfully");
       toast.success("Profile setup complete!");
-      router.push('/dashboard');
+      
+      // Add delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      router.push('/');
     } catch (error: any) {
+      console.error("Onboarding completion error:", error);
       toast.error(error.message || "Failed to complete setup");
     } finally {
       setIsLoading(false);
@@ -153,4 +183,4 @@ export default function OnboardingFlow() {
       </div>
     </div>
   );
-} 
+}
