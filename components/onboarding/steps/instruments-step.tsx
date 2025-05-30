@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MUSIC_ICONS } from "@/constants/music-icons";
 
 interface InstrumentsStepProps {
   value: string[];
@@ -8,26 +9,19 @@ interface InstrumentsStepProps {
   onBack: () => void;
 }
 
-const INSTRUMENTS = [
-  { name: "Guitar", icon: "🎸" },
-  { name: "Piano", icon: "🎹" },
-  { name: "Drums", icon: "🥁" },
-  { name: "Bass", icon: "🎸" },
-  { name: "Violin", icon: "🎻" },
-  { name: "Vocals", icon: "🎤" },
-];
-
 export default function InstrumentsStep({
   value,
   onChange,
   onNext,
   onBack,
 }: InstrumentsStepProps) {
-  const toggleInstrument = (instrument: string) => {
-    if (value.includes(instrument)) {
-      onChange(value.filter(i => i !== instrument));
+  const instruments = MUSIC_ICONS.filter(icon => icon.type === "instrument");
+
+  const toggleInstrument = (instrumentId: string) => {
+    if (value.includes(instrumentId)) {
+      onChange(value.filter(i => i !== instrumentId));
     } else {
-      onChange([...value, instrument]);
+      onChange([...value, instrumentId]);
     }
   };
 
@@ -41,18 +35,18 @@ export default function InstrumentsStep({
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3">
-        {INSTRUMENTS.map(({ name, icon }) => (
+        {instruments.map((instrument) => (
           <button
-            key={name}
-            onClick={() => toggleInstrument(name)}
+            key={instrument.id}
+            onClick={() => toggleInstrument(instrument.id)}
             className={`p-3 md:p-4 rounded-lg border-2 transition-all ${
-              value.includes(name)
+              value.includes(instrument.id)
                 ? "border-[#ffac6d] bg-[#fff5eb]"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
-            <div className="text-xl md:text-2xl mb-1 md:mb-2">{icon}</div>
-            <div className="text-xs md:text-sm font-medium">{name}</div>
+            <div className="text-xl md:text-2xl mb-1 md:mb-2">{instrument.emoji}</div>
+            <div className="text-xs md:text-sm font-medium">{instrument.name}</div>
           </button>
         ))}
       </div>
@@ -77,4 +71,4 @@ export default function InstrumentsStep({
       </div>
     </div>
   );
-} 
+}

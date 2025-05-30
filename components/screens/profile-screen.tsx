@@ -12,14 +12,7 @@ import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Check, X, LogOut } from "lucide-react";
 import { useUserEvents, type UserEvent } from "@/hooks/use-user-events";
-
-// Define the music icon types
-type MusicIcon = {
-  id: string;
-  name: string;
-  emoji: string;
-  type: "instrument" | "genre";
-};
+import { MUSIC_ICONS, type MusicIcon } from "@/constants/music-icons";
 
 // Upcoming Events Component
 function UpcomingEvents() {
@@ -210,26 +203,6 @@ export default function ProfileScreen() {
   );
   const [isSaving, setIsSaving] = useState(false);
 
-  // Music icons data
-  const musicIcons: MusicIcon[] = [
-    { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-    { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-    { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-    { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-    { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-    { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-    { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-    { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-    { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-    { id: "pop", name: "Pop", emoji: "⭐", type: "genre" },
-    { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-    { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-    { id: "electronic", name: "Electronic", emoji: "🤖", type: "genre" },
-    { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-    { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-    { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-  ];
-
   // Profile state
   const [profile, setProfile] = useState({
     name: "",
@@ -341,7 +314,7 @@ export default function ProfileScreen() {
           selectedIcons: [
             ...(profileData?.instruments || []),
             ...(profileData?.genres || []),
-          ],
+          ], // Combine instruments and genres for UI
           instruments: profileData?.instruments || [],
           genres: profileData?.genres || [],
           avatar_url:
@@ -475,12 +448,12 @@ export default function ProfileScreen() {
 
       // Split selectedIcons into instruments and genres
       const instruments = formData.selectedIcons
-        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
         .filter((icon) => icon?.type === "instrument")
         .map((icon) => icon?.id) as string[];
 
       const genres = formData.selectedIcons
-        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
         .filter((icon) => icon?.type === "genre")
         .map((icon) => icon?.id) as string[];
 
@@ -793,12 +766,12 @@ export default function ProfileScreen() {
 
       // Update instruments and genres based on selected icons
       const instruments = newSelectedIcons
-        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
         .filter((icon) => icon?.type === "instrument")
         .map((icon) => icon?.id) as string[];
 
       const genres = newSelectedIcons
-        .map((id) => musicIcons.find((icon) => icon.id === id))
+        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
         .filter((icon) => icon?.type === "genre")
         .map((icon) => icon?.id) as string[];
 
@@ -850,9 +823,8 @@ export default function ProfileScreen() {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {musicIcons
-              .filter((icon) => icon.type === iconSelectorType)
-              .map((icon) => {
+            {MUSIC_ICONS.filter((icon) => icon.type === iconSelectorType).map(
+              (icon) => {
                 const isSelected = formData.selectedIcons.includes(icon.id);
                 return (
                   <button
@@ -892,7 +864,8 @@ export default function ProfileScreen() {
                     )}
                   </button>
                 );
-              })}
+              }
+            )}
           </div>
           {iconLimitWarning && (
             <div className="text-xs text-red-500 mt-4 text-center">
@@ -968,7 +941,7 @@ export default function ProfileScreen() {
                     )
                   )
                   .map((iconId, index, arr) => {
-                    const icon = musicIcons.find((i) => i.id === iconId);
+                    const icon = MUSIC_ICONS.find((i) => i.id === iconId);
                     if (!icon) return null;
                     const total = arr.length;
                     const baseRadius = 120;
@@ -1046,7 +1019,7 @@ export default function ProfileScreen() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {formData.selectedIcons
-                    .map((id) => musicIcons.find((icon) => icon.id === id))
+                    .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                     .filter((icon) => icon && icon.type === "instrument")
                     .map(
                       (icon) =>
@@ -1079,7 +1052,7 @@ export default function ProfileScreen() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {formData.selectedIcons
-                    .map((id) => musicIcons.find((icon) => icon.id === id))
+                    .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                     .filter((icon) => icon && icon.type === "genre")
                     .map(
                       (icon) =>
@@ -1208,7 +1181,7 @@ export default function ProfileScreen() {
                     )
                   )
                   .map((iconId, index, arr) => {
-                    const icon = musicIcons.find((i) => i.id === iconId);
+                    const icon = MUSIC_ICONS.find((i) => i.id === iconId);
                     if (!icon) return null;
                     const total = arr.length;
                     const baseRadius = 120;
@@ -1252,7 +1225,7 @@ export default function ProfileScreen() {
                   <h3 className="text-lg font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.instruments.map((instrument) => {
-                      const icon = musicIcons.find((i) => i.id === instrument);
+                      const icon = MUSIC_ICONS.find((i) => i.id === instrument);
                       return (
                         <div
                           key={instrument}
@@ -1277,7 +1250,7 @@ export default function ProfileScreen() {
                   <h3 className="text-lg font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.genres.map((genre) => {
-                      const icon = musicIcons.find((i) => i.id === genre);
+                      const icon = MUSIC_ICONS.find((i) => i.id === genre);
                       return (
                         <div
                           key={genre}

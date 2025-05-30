@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MUSIC_ICONS } from "@/constants/music-icons";
 
 interface GenresStepProps {
   value: string[];
@@ -8,26 +9,19 @@ interface GenresStepProps {
   onBack: () => void;
 }
 
-const GENRES = [
-  { name: "Rock", icon: "🤘" },
-  { name: "Jazz", icon: "🎷" },
-  { name: "Pop", icon: "🎵" },
-  { name: "Hip Hop", icon: "🎤" },
-  { name: "R&B", icon: "🎼" },
-  { name: "Electronic", icon: "🎹" },
-];
-
 export default function GenresStep({
   value,
   onChange,
   onNext,
   onBack,
 }: GenresStepProps) {
-  const toggleGenre = (genre: string) => {
-    if (value.includes(genre)) {
-      onChange(value.filter(g => g !== genre));
+  const genres = MUSIC_ICONS.filter(icon => icon.type === "genre");
+
+  const toggleGenre = (genreId: string) => {
+    if (value.includes(genreId)) {
+      onChange(value.filter(g => g !== genreId));
     } else {
-      onChange([...value, genre]);
+      onChange([...value, genreId]);
     }
   };
 
@@ -41,18 +35,18 @@ export default function GenresStep({
       </div>
 
       <div className="grid grid-cols-2 gap-2 md:gap-3 sm:grid-cols-3">
-        {GENRES.map(({ name, icon }) => (
+        {genres.map((genre) => (
           <button
-            key={name}
-            onClick={() => toggleGenre(name)}
+            key={genre.id}
+            onClick={() => toggleGenre(genre.id)}
             className={`p-3 md:p-4 rounded-lg border-2 transition-all ${
-              value.includes(name)
+              value.includes(genre.id)
                 ? "border-[#ffac6d] bg-[#fff5eb]"
                 : "border-gray-200 hover:border-gray-300"
             }`}
           >
-            <div className="text-xl md:text-2xl mb-1 md:mb-2">{icon}</div>
-            <div className="text-xs md:text-sm font-medium">{name}</div>
+            <div className="text-xl md:text-2xl mb-1 md:mb-2">{genre.emoji}</div>
+            <div className="text-xs md:text-sm font-medium">{genre.name}</div>
           </button>
         ))}
       </div>
@@ -77,4 +71,4 @@ export default function GenresStep({
       </div>
     </div>
   );
-} 
+}
