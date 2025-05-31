@@ -46,8 +46,8 @@ export default function BandsScreen({ onCreateBand }: BandsScreenProps) {
     {
       id: "band-5",
       name: "Acoustic Sessions",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: getCurrentISOString(),
+      updated_at: getCurrentISOString(),
     }
   ]
 

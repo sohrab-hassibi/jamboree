@@ -3,25 +3,7 @@
 import { Avatar } from "@/components/ui/avatar";
 import Image from "next/image";
 import { Participant } from "@/hooks/use-event";
-
-const musicIcons = [
-  { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-  { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-  { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-  { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-  { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-  { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-  { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-  { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-  { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-  { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-  { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-  { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-  { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-  { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-  { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-  { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-];
+import { MUSIC_ICONS } from "@/constants/music-icons";
 
 const normalizeName = (name: string) => {
   // Convert to lowercase and remove all non-word characters (including spaces)
@@ -30,7 +12,7 @@ const normalizeName = (name: string) => {
 
 const getEmoji = (name: string, type: "instrument" | "genre") => {
   const normalizedInput = normalizeName(name);
-  const icon = musicIcons.find(icon => 
+  const icon = MUSIC_ICONS.find(icon => 
     normalizeName(icon.name) === normalizedInput && icon.type === type
   );
   return icon ? icon.emoji : name;

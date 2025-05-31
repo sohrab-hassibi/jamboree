@@ -10,25 +10,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { useEventParticipation } from "@/hooks/use-event-participation"
 import { ParticipantCard } from "@/components/participant-card"
 import { Participant } from "@/hooks/use-event"
-
-const musicIcons = [
-  { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-  { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-  { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-  { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-  { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-  { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-  { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-  { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-  { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-  { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-  { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-  { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-  { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-  { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-  { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-  { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-];
+import { MUSIC_ICONS } from "@/constants/music-icons"
 
 interface EventDetailScreenProps {
   eventId: string;
@@ -44,6 +26,9 @@ export default function EventDetailScreen({ eventId, onBack }: EventDetailScreen
     handleMaybe,
     participants
   } = useEventParticipation(eventId)
+
+  const selectedInstruments = participants.going.flatMap(participant => participant.selected_instruments || [])
+  const selectedGenres = participants.going.flatMap(participant => participant.selected_genres || [])
 
   return (
     <div className="min-h-screen bg-white lg:bg-transparent lg:min-h-0 lg:rounded-xl lg:overflow-hidden lg:border lg:shadow-sm lg:my-6 flex flex-col">
@@ -247,8 +232,22 @@ export default function EventDetailScreen({ eventId, onBack }: EventDetailScreen
                     <div>
                       <div className="text-sm font-medium">{participant.full_name}</div>
                       <div className="flex mt-1 gap-1">
-                        <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Instrument">🎸</span>
-                        <span className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title="Genre">🤘</span>
+                        {participant.selected_instruments?.map(instrumentId => {
+                          const icon = MUSIC_ICONS.find(icon => icon.id === instrumentId)
+                          return icon ? (
+                            <span key={icon.id} className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title={icon.name}>
+                              {icon.emoji}
+                            </span>
+                          ) : null
+                        })}
+                        {participant.selected_genres?.map(genreId => {
+                          const icon = MUSIC_ICONS.find(icon => icon.id === genreId)
+                          return icon ? (
+                            <span key={icon.id} className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600" title={icon.name}>
+                              {icon.id === 'pop' ? '⭐' : icon.emoji}
+                            </span>
+                          ) : null
+                        })}
                       </div>
                     </div>
                   </div>

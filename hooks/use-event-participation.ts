@@ -90,7 +90,7 @@ export function useEventParticipation(eventId: string): EventParticipation {
         .update({
           participants_going: goingParticipants.map(stringifyParticipant),
           participants_maybe: maybeParticipants.map(stringifyParticipant),
-          updated_at: new Date().toISOString()
+          updated_at: getCurrentISOString()
         })
         .eq('id', eventId);
 

@@ -24,37 +24,11 @@ import {
 import { useEventChat, type ChatMessage } from "@/hooks/use-event-chat";
 import { useAuth } from "@/context/SupabaseContext";
 import { ParticipantCard } from "@/components/participant-card";
-
-// Music icons data
-type MusicIcon = {
-  id: string;
-  name: string;
-  emoji: string;
-  type: "instrument" | "genre";
-};
-
-const musicIcons: MusicIcon[] = [
-  { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-  { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-  { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-  { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-  { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-  { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-  { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-  { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-  { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-  { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-  { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-  { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-  { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-  { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-  { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-  { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-];
+import { MUSIC_ICONS } from "@/constants/music-icons";
 
 // Helper function to get emoji by name
 const getEmoji = (name: string, type: "instrument" | "genre") => {
-  const icon = musicIcons.find(
+  const icon = MUSIC_ICONS.find(
     (icon) =>
       icon.name.toLowerCase() === name.toLowerCase() && icon.type === type
   );
@@ -500,7 +474,7 @@ export default function EventScreen({
                                   className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
                                   title={instrument}
                                 >
-                                  {musicIcons.find(
+                                  {MUSIC_ICONS.find(
                                     (icon) =>
                                       icon.id === instrument &&
                                       icon.type === "instrument"
@@ -516,7 +490,7 @@ export default function EventScreen({
                                 className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
                                 title={genre}
                               >
-                                {musicIcons.find(
+                                {MUSIC_ICONS.find(
                                   (icon) =>
                                     icon.id === genre && icon.type === "genre"
                                 )?.emoji || "🎵"}
@@ -566,7 +540,7 @@ export default function EventScreen({
                                 className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
                                 title={instrument}
                               >
-                                {musicIcons.find(
+                                {MUSIC_ICONS.find(
                                   (icon) =>
                                     icon.id === instrument &&
                                     icon.type === "instrument"
@@ -582,7 +556,7 @@ export default function EventScreen({
                               className="w-5 h-5 bg-orange-100 rounded-full flex items-center justify-center text-xs text-orange-600"
                               title={genre}
                             >
-                              {musicIcons.find(
+                              {MUSIC_ICONS.find(
                                 (icon) =>
                                   icon.id === genre && icon.type === "genre"
                               )?.emoji || "🎵"}

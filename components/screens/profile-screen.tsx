@@ -21,11 +21,7 @@ function UpcomingEvents() {
 
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
-    return start.toLocaleDateString([], {
-      weekday: "short",
-      month: "numeric",
-      day: "numeric",
-    });
+    return formatDate(start);
   };
 
   const handleEventClick = (eventId: string) => {
@@ -108,11 +104,7 @@ function PostGamesEvents() {
 
   const formatEventDate = (startTime: string) => {
     const start = new Date(startTime);
-    return start.toLocaleDateString([], {
-      weekday: "short",
-      month: "numeric",
-      day: "numeric",
-    });
+    return formatDate(start);
   };
 
   const handleEventClick = (eventId: string) => {
@@ -332,7 +324,7 @@ export default function ProfileScreen() {
           await supabase.from("profiles").upsert({
             id: user.id,
             full_name: userName,
-            updated_at: new Date().toISOString(),
+            updated_at: getCurrentISOString(),
           });
         }
       } catch (error) {
@@ -521,7 +513,7 @@ export default function ProfileScreen() {
         bio: formData.bio,
         instruments,
         genres,
-        updated_at: new Date().toISOString(),
+        updated_at: getCurrentISOString(),
       };
 
       // Only include avatar_url if we have a new one
@@ -667,7 +659,7 @@ export default function ProfileScreen() {
               const updateData = {
                 participants_going: stringifyParticipants(goingParticipants),
                 participants_maybe: stringifyParticipants(maybeParticipants),
-                updated_at: new Date().toISOString(),
+                updated_at: getCurrentISOString(),
               };
 
               // Update the event
@@ -750,38 +742,26 @@ export default function ProfileScreen() {
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      const isSelected = prev.selectedIcons.includes(iconId);
-      let newSelectedIcons;
-      if (isSelected) {
-        setIconLimitWarning(false); // Reset warning if deselecting
-        newSelectedIcons = prev.selectedIcons.filter((id) => id !== iconId);
+      const icon = MUSIC_ICONS.find((i) => i.id === iconId);
+      if (!icon) return prev;
+
+      if (icon.type === "instrument") {
+        const isSelected = prev.instruments.includes(iconId);
+        return {
+          ...prev,
+          instruments: isSelected
+            ? prev.instruments.filter((id) => id !== iconId)
+            : [...prev.instruments, iconId],
+        };
       } else {
-        if (prev.selectedIcons.length >= MAX_ICONS) {
-          setIconLimitWarning(true); // Show warning if trying to exceed
-          return prev;
-        }
-        setIconLimitWarning(false); // Reset warning if under limit
-        newSelectedIcons = [...prev.selectedIcons, iconId];
+        const isSelected = prev.genres.includes(iconId);
+        return {
+          ...prev,
+          genres: isSelected
+            ? prev.genres.filter((id) => id !== iconId)
+            : [...prev.genres, iconId],
+        };
       }
-
-      // Update instruments and genres based on selected icons
-      const instruments = newSelectedIcons
-        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
-        .filter((icon) => icon?.type === "instrument")
-        .map((icon) => icon?.id) as string[];
-
-      const genres = newSelectedIcons
-        .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
-        .filter((icon) => icon?.type === "genre")
-        .map((icon) => icon?.id) as string[];
-
-      return {
-        ...prev,
-        selectedIcons: newSelectedIcons,
-        instruments,
-        genres,
-        avatar_url: prev.avatar_url,
-      };
     });
   };
 
@@ -931,19 +911,14 @@ export default function ProfileScreen() {
                   </label>
                 </div>
                 {/* Icons absolutely positioned in this larger container */}
-                {formData.selectedIcons
-                  .concat(
-                    formData.instruments.filter(
-                      (id) => !formData.selectedIcons.includes(id)
-                    ),
-                    formData.genres.filter(
-                      (id) => !formData.selectedIcons.includes(id)
-                    )
-                  )
-                  .map((iconId, index, arr) => {
+                {[...formData.instruments, ...formData.genres].map(
+                  (iconId, index, arr) => {
                     const icon = MUSIC_ICONS.find((i) => i.id === iconId);
                     if (!icon) return null;
+                    
                     const total = arr.length;
+                    if (total === 0) return null;
+                    
                     const baseRadius = 120;
                     const center = 160;
                     const angle = (index / total) * 2 * Math.PI - Math.PI / 2;
@@ -952,8 +927,8 @@ export default function ProfileScreen() {
 
                     return (
                       <div
-                        key={icon.id}
-                        className="absolute bg-[#ffac6d] rounded-full w-16 h-16 flex items-center justify-center shadow-sm"
+                        key={`${icon.id}-${index}`}
+                        className="absolute bg-[#ffac6d] rounded-full w-14 h-14 flex items-center justify-center shadow-sm"
                         style={{
                           left: `${x}px`,
                           top: `${y}px`,
@@ -965,7 +940,8 @@ export default function ProfileScreen() {
                         {icon.emoji}
                       </div>
                     );
-                  })}
+                  }
+                )}
               </div>
 
               <h2 className="text-3xl font-bold mt-4">{profile.name}</h2>

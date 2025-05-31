@@ -508,7 +508,7 @@ export default function BandChatScreen({ bandId = "", onBack }: BandChatScreenPr
               messages.map((message: BandMessage) => {
                 const isCurrentUser = message.user_id === user?.id;
                 const messageDate = new Date(message.created_at);
-                const messageTime = messageDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                const messageTime = formatTime(messageDate);
                 
                 return (
                   <div key={message.id} className={`flex items-start ${isCurrentUser ? "justify-end gap-2" : "gap-2"}`}>

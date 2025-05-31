@@ -10,19 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Check, X } from "lucide-react";
+import { MUSIC_ICONS } from "@/constants/music-icons";
 
 type ProfileData = {
   name: string;
   bio: string;
-  selectedIcons: string[];
-};
-
-// Define the music icon types
-type MusicIcon = {
-  id: string;
-  name: string;
-  emoji: string;
-  type: "instrument" | "genre";
+  selectedInstruments: string[];
+  selectedGenres: string[];
 };
 
 export default function ProfileScreen() {
@@ -45,31 +39,12 @@ export default function ProfileScreen() {
     "instrument" | "genre"
   >("instrument");
 
-  // Music icons data
-  const musicIcons: MusicIcon[] = [
-    { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-    { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-    { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-    { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-    { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-    { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-    { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-    { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-    { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-    { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-    { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-    { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-    { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-    { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-    { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-    { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-  ];
-
   // Profile state
   const [profile, setProfile] = useState<ProfileData>({
     name: "",
     bio: "",
-    selectedIcons: [],
+    selectedInstruments: [],
+    selectedGenres: [],
   });
 
   // Fetch user data when auth is ready
@@ -86,19 +61,22 @@ export default function ProfileScreen() {
           // Set the profile name to the user's full name or email
           const userName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
           const userBio = user.user_metadata?.bio || '';
-          const userIcons = user.user_metadata?.selected_icons || [];
+          const userInstruments = user.user_metadata?.selected_instruments || [];
+          const userGenres = user.user_metadata?.selected_genres || [];
           
           const userProfile: ProfileData = {
             name: userName,
             bio: userBio,
-            selectedIcons: Array.isArray(userIcons) ? userIcons : []
+            selectedInstruments: Array.isArray(userInstruments) ? userInstruments : [],
+            selectedGenres: Array.isArray(userGenres) ? userGenres : [],
           };
           
           setProfile(userProfile);
           setFormData(prev => ({
             ...prev,
             ...userProfile,
-            selectedIcons: [...userProfile.selectedIcons]
+            selectedInstruments: [...userProfile.selectedInstruments],
+            selectedGenres: [...userProfile.selectedGenres],
           }));
         }
       } catch (error) {
@@ -115,7 +93,8 @@ export default function ProfileScreen() {
   const [formData, setFormData] = useState<ProfileData>({
     name: "",
     bio: "",
-    selectedIcons: [],
+    selectedInstruments: [],
+    selectedGenres: [],
   });
 
   // Function to handle form input changes
@@ -137,7 +116,8 @@ export default function ProfileScreen() {
         data: { 
           full_name: formData.name,
           bio: formData.bio,
-          selected_icons: [...formData.selectedIcons] // Ensure we store a copy of the array
+          selected_instruments: [...formData.selectedInstruments],
+          selected_genres: [...formData.selectedGenres],
         }
       });
 
@@ -147,7 +127,8 @@ export default function ProfileScreen() {
       setProfile({
         name: formData.name,
         bio: formData.bio,
-        selectedIcons: [...formData.selectedIcons], // Ensure we create a new array reference
+        selectedInstruments: [...formData.selectedInstruments],
+        selectedGenres: [...formData.selectedGenres],
       });
       
       setEditProfileMode(false);
@@ -162,7 +143,8 @@ export default function ProfileScreen() {
     setFormData({
       name: profile.name,
       bio: profile.bio,
-      selectedIcons: [...profile.selectedIcons],
+      selectedInstruments: [...profile.selectedInstruments],
+      selectedGenres: [...profile.selectedGenres],
     });
     setEditProfileMode(false);
     setShowIconSelector(false);
@@ -171,13 +153,13 @@ export default function ProfileScreen() {
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      const newSelectedIcons = prev.selectedIcons.includes(iconId)
-        ? prev.selectedIcons.filter((id) => id !== iconId)
-        : [...prev.selectedIcons, iconId];
+      const newSelectedIcons = prev.selectedInstruments.includes(iconId)
+        ? prev.selectedInstruments.filter((id) => id !== iconId)
+        : [...prev.selectedInstruments, iconId];
       
       return {
         ...prev,
-        selectedIcons: newSelectedIcons,
+        selectedInstruments: newSelectedIcons,
       };
     });
   };
@@ -220,10 +202,10 @@ export default function ProfileScreen() {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {musicIcons
+            {MUSIC_ICONS
               .filter((icon) => icon.type === iconSelectorType)
               .map((icon) => {
-                const isSelected = formData.selectedIcons.includes(icon.id);
+                const isSelected = formData.selectedInstruments.includes(icon.id);
                 return (
                   <button
                     key={icon.id}
@@ -356,8 +338,8 @@ export default function ProfileScreen() {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {formData.selectedIcons
-                    .map((id) => musicIcons.find((icon) => icon.id === id))
+                  {formData.selectedInstruments
+                    .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                     .filter((icon) => icon && icon.type === "instrument")
                     .map(
                       (icon) =>
@@ -389,8 +371,8 @@ export default function ProfileScreen() {
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {formData.selectedIcons
-                    .map((id) => musicIcons.find((icon) => icon.id === id))
+                  {formData.selectedGenres
+                    .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                     .filter((icon) => icon && icon.type === "genre")
                     .map(
                       (icon) =>
@@ -448,7 +430,8 @@ export default function ProfileScreen() {
               setFormData({
                 name: profile.name,
                 bio: profile.bio,
-                selectedIcons: [...profile.selectedIcons],
+                selectedInstruments: [...profile.selectedInstruments],
+                selectedGenres: [...profile.selectedGenres],
               });
             }}
           >
@@ -473,12 +456,12 @@ export default function ProfileScreen() {
                 </div>
 
                 {/* Music icons around profile picture */}
-                {profile.selectedIcons.map((iconId, index) => {
-                  const icon = musicIcons.find((i) => i.id === iconId);
+                {profile.selectedInstruments.map((iconId, index) => {
+                  const icon = MUSIC_ICONS.find((i) => i.id === iconId);
                   if (!icon) return null;
 
                   // Calculate position in a circle above the profile picture
-                  const totalIcons = profile.selectedIcons.length;
+                  const totalIcons = profile.selectedInstruments.length;
                   const angle = (index / totalIcons) * Math.PI - Math.PI / 2; // Start from top (-π/2) and go 180 degrees (π)
 
                   // Profile picture is 32px wide (radius 16px)
@@ -528,8 +511,8 @@ export default function ProfileScreen() {
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Instruments:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {profile.selectedIcons
-                      .map((id) => musicIcons.find((icon) => icon.id === id))
+                    {profile.selectedInstruments
+                      .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                       .filter((icon) => icon && icon.type === "instrument")
                       .map(
                         (icon) =>
@@ -549,8 +532,8 @@ export default function ProfileScreen() {
                 <div className="space-y-3">
                   <h3 className="text-sm font-medium">Genres:</h3>
                   <div className="flex flex-wrap gap-2">
-                    {profile.selectedIcons
-                      .map((id) => musicIcons.find((icon) => icon.id === id))
+                    {profile.selectedGenres
+                      .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                       .filter((icon) => icon && icon.type === "genre")
                       .map(
                         (icon) =>
@@ -645,7 +628,8 @@ export default function ProfileScreen() {
               setFormData({
                 name: profile.name,
                 bio: profile.bio,
-                selectedIcons: [...profile.selectedIcons],
+                selectedInstruments: [...profile.selectedInstruments],
+                selectedGenres: [...profile.selectedGenres],
               });
             }}
           >

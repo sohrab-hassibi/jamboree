@@ -9,6 +9,7 @@ import { PlusCircle, ChevronLeft, Send, Info, Users, User, Home, Camera, Search,
 import { Avatar } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { MUSIC_ICONS } from "@/constants/music-icons"
 
 export default function IPhonePreview() {
   const [activeScreen, setActiveScreen] = useState<

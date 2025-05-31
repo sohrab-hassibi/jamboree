@@ -9,6 +9,7 @@ import { PlusCircle, ChevronLeft, Send, Info, Menu, MessageSquare, Camera, Searc
 import { Avatar } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { MUSIC_ICONS } from "@/constants/music-icons"
 
 // Define the music icon types
 type MusicIcon = {
@@ -150,38 +151,20 @@ export default function IPhoneWebsitePreview() {
     setSelectedMembers(selectedMembers.filter((member) => member.id !== userId))
   }
 
-  // Music icons data
-  const musicIcons: MusicIcon[] = [
-    { id: "guitar", name: "Guitar", emoji: "🎸", type: "instrument" },
-    { id: "piano", name: "Piano", emoji: "🎹", type: "instrument" },
-    { id: "drums", name: "Drums", emoji: "🥁", type: "instrument" },
-    { id: "saxophone", name: "Saxophone", emoji: "🎷", type: "instrument" },
-    { id: "trumpet", name: "Trumpet", emoji: "🎺", type: "instrument" },
-    { id: "violin", name: "Violin", emoji: "🎻", type: "instrument" },
-    { id: "microphone", name: "Vocals", emoji: "🎤", type: "instrument" },
-    { id: "dj", name: "DJ", emoji: "🎧", type: "instrument" },
-    { id: "rock", name: "Rock", emoji: "🤘", type: "genre" },
-    { id: "pop", name: "Pop", emoji: "🎵", type: "genre" },
-    { id: "jazz", name: "Jazz", emoji: "🎶", type: "genre" },
-    { id: "classical", name: "Classical", emoji: "🎼", type: "genre" },
-    { id: "electronic", name: "Electronic", emoji: "💿", type: "genre" },
-    { id: "hiphop", name: "Hip Hop", emoji: "🔊", type: "genre" },
-    { id: "country", name: "Country", emoji: "🤠", type: "genre" },
-    { id: "reggae", name: "Reggae", emoji: "🌴", type: "genre" },
-  ]
-
   // Profile state
   const [profile, setProfile] = useState({
     name: "Tommy Defenestrati",
     bio: "I find organello bell sounds how to get started with a jam while my favorite artist is Lady Gaga.",
-    selectedIcons: ["guitar", "piano", "rock", "pop", "jazz", "electronic"], // Default selected icons
+    instruments: ["guitar", "piano", "drums"], // Default selected instruments
+    genres: ["rock", "pop", "jazz", "electronic"], // Default selected genres
   })
 
   // Form state for editing
   const [formData, setFormData] = useState({
     name: profile.name,
     bio: profile.bio,
-    selectedIcons: [...profile.selectedIcons],
+    instruments: [...profile.instruments],
+    genres: [...profile.genres],
   })
 
   // Function to handle RSVP actions
@@ -357,7 +340,8 @@ export default function IPhoneWebsitePreview() {
     setProfile({
       name: formData.name,
       bio: formData.bio,
-      selectedIcons: formData.selectedIcons,
+      instruments: formData.instruments,
+      genres: formData.genres,
     })
     setEditProfileMode(false)
     setShowIconSelector(false)
@@ -368,7 +352,8 @@ export default function IPhoneWebsitePreview() {
     setFormData({
       name: profile.name,
       bio: profile.bio,
-      selectedIcons: [...profile.selectedIcons],
+      instruments: [...profile.instruments],
+      genres: [...profile.genres],
     })
     setEditProfileMode(false)
     setShowIconSelector(false)
@@ -377,15 +362,15 @@ export default function IPhoneWebsitePreview() {
   // Function to toggle icon selection
   const toggleIconSelection = (iconId: string) => {
     setFormData((prev) => {
-      if (prev.selectedIcons.includes(iconId)) {
+      if (prev.instruments.includes(iconId)) {
         return {
           ...prev,
-          selectedIcons: prev.selectedIcons.filter((id) => id !== iconId),
+          instruments: prev.instruments.filter((id) => id !== iconId),
         }
       } else {
         return {
           ...prev,
-          selectedIcons: [...prev.selectedIcons, iconId],
+          instruments: [...prev.instruments, iconId],
         }
       }
     })
@@ -671,28 +656,26 @@ export default function IPhoneWebsitePreview() {
 
               <div className="flex-1 overflow-y-auto p-3">
                 <div className="grid grid-cols-2 gap-3">
-                  {musicIcons
-                    .filter((icon) => icon.type === iconSelectorType)
-                    .map((icon) => {
-                      const isSelected = formData.selectedIcons.includes(icon.id)
-                      return (
-                        <button
-                          key={icon.id}
-                          className={`flex flex-col items-center justify-center p-3 rounded-lg relative ${
-                            isSelected ? "bg-[#ffd2b0]" : "bg-gray-100"
-                          }`}
-                          onClick={() => toggleIconSelection(icon.id)}
-                        >
-                          <div className="text-2xl mb-1">{icon.emoji}</div>
-                          <div className="text-xs">{icon.name}</div>
-                          {isSelected && (
-                            <div className="absolute top-1.5 right-1.5 bg-[#ffac6d] rounded-full p-0.5">
-                              <Check className="h-3 w-3 text-white" />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
+                  {MUSIC_ICONS.filter((icon) => icon.type === iconSelectorType).map((icon) => {
+                    const isSelected = formData.instruments.includes(icon.id) || formData.genres.includes(icon.id)
+                    return (
+                      <button
+                        key={icon.id}
+                        className={`flex flex-col items-center justify-center p-3 rounded-lg relative ${
+                          isSelected ? "bg-[#ffd2b0]" : "bg-gray-100"
+                        }`}
+                        onClick={() => toggleIconSelection(icon.id)}
+                      >
+                        <div className="text-2xl mb-1">{icon.emoji}</div>
+                        <div className="text-xs">{icon.name}</div>
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 bg-[#ffac6d] rounded-full p-0.5">
+                            <Check className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -776,8 +759,8 @@ export default function IPhoneWebsitePreview() {
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {formData.selectedIcons
-                          .map((id) => musicIcons.find((icon) => icon.id === id))
+                        {formData.instruments
+                          .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                           .filter((icon) => icon && icon.type === "instrument")
                           .map(
                             (icon) =>
@@ -804,8 +787,8 @@ export default function IPhoneWebsitePreview() {
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
-                        {formData.selectedIcons
-                          .map((id) => musicIcons.find((icon) => icon.id === id))
+                        {formData.genres
+                          .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                           .filter((icon) => icon && icon.type === "genre")
                           .map(
                             (icon) =>
@@ -867,44 +850,46 @@ export default function IPhoneWebsitePreview() {
                       </div>
 
                       {/* Music icons around profile picture */}
-                      {profile.selectedIcons.map((iconId, index) => {
-                        const icon = musicIcons.find((i) => i.id === iconId)
-                        if (!icon) return null
+                      {profile.instruments
+                        .concat(profile.genres)
+                        .map((iconId, index) => {
+                          const icon = MUSIC_ICONS.find((i) => i.id === iconId)
+                          if (!icon) return null
 
-                        // Calculate position in a circle around the profile picture
-                        const totalIcons = profile.selectedIcons.length
-                        const angle = (index / totalIcons) * 2 * Math.PI
+                          // Calculate position in a circle around the profile picture
+                          const totalIcons = profile.instruments.length + profile.genres.length
+                          const angle = (index / totalIcons) * 2 * Math.PI
 
-                        // Profile picture is 24px wide (radius 12px)
-                        // But we need to account for the orange border (border-4 = 4px)
-                        const profileRadius = 12
-                        const borderWidth = 4
-                        const totalProfileRadius = profileRadius + borderWidth
+                          // Profile picture is 24px wide (radius 12px)
+                          // But we need to account for the orange border (border-4 = 4px)
+                          const profileRadius = 12
+                          const borderWidth = 4
+                          const totalProfileRadius = profileRadius + borderWidth
 
-                        // Ensure icons are outside the orange border
-                        // Use the total radius (including border) as the base
-                        const iconPlacementRadius = totalProfileRadius * 1.25
+                          // Ensure icons are outside the orange border
+                          // Use the total radius (including border) as the base
+                          const iconPlacementRadius = totalProfileRadius * 1.25
 
-                        // Calculate x and y coordinates
-                        const x = Math.cos(angle) * iconPlacementRadius
-                        const y = Math.sin(angle) * iconPlacementRadius
+                          // Calculate x and y coordinates
+                          const x = Math.cos(angle) * iconPlacementRadius
+                          const y = Math.sin(angle) * iconPlacementRadius
 
-                        return (
-                          <div
-                            key={icon.id}
-                            className="absolute bg-[#ffac6d] rounded-full w-8 h-8 flex items-center justify-center shadow-sm"
-                            style={{
-                              left: "50%",
-                              top: "50%",
-                              transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))`,
-                              fontSize: "16px",
-                              zIndex: 10,
-                            }}
-                          >
-                            {icon.emoji}
-                          </div>
-                        )
-                      })}
+                          return (
+                            <div
+                              key={icon.id}
+                              className="absolute bg-[#ffac6d] rounded-full w-8 h-8 flex items-center justify-center shadow-sm"
+                              style={{
+                                left: "50%",
+                                top: "50%",
+                                transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))`,
+                                fontSize: "16px",
+                                zIndex: 10,
+                              }}
+                            >
+                              {icon.emoji}
+                            </div>
+                          )
+                        })}
                     </div>
 
                     <h2 className="text-base font-bold mt-3">{profile.name}</h2>
@@ -919,8 +904,8 @@ export default function IPhoneWebsitePreview() {
                     <div className="space-y-2">
                       <h3 className="text-xs font-medium">Instruments:</h3>
                       <div className="flex flex-wrap gap-1.5">
-                        {profile.selectedIcons
-                          .map((id) => musicIcons.find((icon) => icon.id === id))
+                        {profile.instruments
+                          .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                           .filter((icon) => icon && icon.type === "instrument")
                           .map(
                             (icon) =>
@@ -937,8 +922,8 @@ export default function IPhoneWebsitePreview() {
                     <div className="space-y-2">
                       <h3 className="text-xs font-medium">Genres:</h3>
                       <div className="flex flex-wrap gap-1.5">
-                        {profile.selectedIcons
-                          .map((id) => musicIcons.find((icon) => icon.id === id))
+                        {profile.genres
+                          .map((id) => MUSIC_ICONS.find((icon) => icon.id === id))
                           .filter((icon) => icon && icon.type === "genre")
                           .map(
                             (icon) =>
@@ -1034,7 +1019,8 @@ export default function IPhoneWebsitePreview() {
                     setFormData({
                       name: profile.name,
                       bio: profile.bio,
-                      selectedIcons: [...profile.selectedIcons],
+                      instruments: [...profile.instruments],
+                      genres: [...profile.genres],
                     })
                   }}
                 >
